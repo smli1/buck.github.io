@@ -4,533 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>⚔️ 巴克 9等戰鬥實戰控制台 ( 橫放專用)</title>
-    <style>
-        :root {
-            --bg-dark: #121214;
-            --bg-card: #1e1e24;
-            --bg-inner: #2a2a32;
-            --border-color: #3f3f46;
-            --text-main: #f4f4f5;
-            --text-muted: #a1a1aa;
-            --primary: #e11d48;
-            --primary-hover: #be123c;
-            --secondary: #3b82f6;
-            --success: #22c55e;
-            --warning: #f59e0b;
-            --accent: #a855f7;
-            --border-radius: 10px;
-        }
+        <link rel="stylesheet" href="styles.css">
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            height: 100vh;
-            overflow: hidden; /* 由內部區塊各自滾動，防止整頁大滾動 */
-            display: flex;
-            flex-direction: column;
-            padding: 16px;
-        }
-
-        header {
-            padding: 10px;
-            background: linear-gradient(135deg, #1e1b4b, #31102f);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            margin-bottom: 16px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-
-        header h1 {
-            font-size: 1.4rem;
-            color: #ffffff;
-        }
-
-        /* 🗺️  橫螢幕核心：雙欄佈局 */
-        .main-container {
-            display: grid;
-            grid-template-columns: 350px 1fr; /* 左側固定寬度，右側彈性延伸 */
-            gap: 16px;
-            flex: 1;
-            min-height: 0; /* 關鍵：允許子元素在 flex 佈局中正常滾動 */
-        }
-
-        /* ⬅️ 左側欄位：狀態與資源監控 */
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-
-        /* ➡️ 右側欄位：行動步驟與動態日誌 */
-        .content-area {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            overflow-y: auto;
-            padding-right: 4px;
-            position: relative;
-        }
-
-        /* 基礎卡片樣式 */
-        .card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            padding: 14px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .stat-box {
-            background-color: var(--bg-inner);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 10px;
-            text-align: center;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-            display: block;
-        }
-
-        .stat-value {
-            font-size: 1.2rem;
-            font-weight: 700;
-        }
-
-        /* 生命值追蹤器 */
-        .hp-display {
-            font-size: 1.8rem;
-            font-weight: 800;
-            text-align: center;
-            margin: 8px 0;
-        }
-
-        .hp-controls {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-        }
-
-        .hp-btn {
-            background-color: var(--bg-inner);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 10px 0;
-            font-size: 0.9rem;
-            font-weight: 700;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .hp-btn:active { background-color: #3f3f46; }
-
-        /* 資源勾選列 */
-        .tracker-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .tracker-row:last-child { border-bottom: none; }
-
-        .checkbox-group { display: flex; gap: 8px; }
-        .tracker-checkbox {
-            width: 22px;
-            height: 22px;
-            cursor: pointer;
-            accent-color: var(--primary);
-        }
-
-        /* 戰鬥回合步驟 */
-        .step-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 6px;
-        }
-
-        .step-title {
-            font-weight: 700;
-            color: var(--warning);
-            font-size: 1.05rem;
-        }
-
-        .step-badge {
-            background-color: #27272a;
-            color: var(--text-muted);
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-        }
-
-        .action-card {
-            background-color: var(--bg-inner);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-        }
-        .action-card:last-child { margin-bottom: 0; }
-
-        .action-name {
-            font-weight: 700;
-            font-size: 1rem;
-            color: #ffffff;
-            margin-bottom: 4px;
-        }
-
-        .action-desc {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 10px;
-        }
-
-        /* 按鈕群組 */
-        .btn-group {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 10px;
-            font-size: 0.9rem;
-            font-weight: 700;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        /* Themed scrollbars for modern browsers */
-        .sidebar, .content-area, .log-content, .floating-log-panel, .dice-picker-grid {
-            scrollbar-color: var(--primary) var(--bg-inner);
-            scrollbar-width: thin;
-        }
-
-        .sidebar::-webkit-scrollbar, .content-area::-webkit-scrollbar, .log-content::-webkit-scrollbar, .floating-log-panel::-webkit-scrollbar, .dice-picker-grid::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-        .sidebar::-webkit-scrollbar-track, .content-area::-webkit-scrollbar-track, .log-content::-webkit-scrollbar-track, .floating-log-panel::-webkit-scrollbar-track, .dice-picker-grid::-webkit-scrollbar-track {
-            background: var(--bg-inner);
-            border-radius: 10px;
-        }
-        .sidebar::-webkit-scrollbar-thumb, .content-area::-webkit-scrollbar-thumb, .log-content::-webkit-scrollbar-thumb, .floating-log-panel::-webkit-scrollbar-thumb, .dice-picker-grid::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, var(--primary), var(--primary-hover));
-            border-radius: 10px;
-            border: 2px solid var(--bg-card);
-        }
-        .sidebar::-webkit-scrollbar-thumb:hover, .content-area::-webkit-scrollbar-thumb:hover, .log-content::-webkit-scrollbar-thumb:hover, .floating-log-panel::-webkit-scrollbar-thumb:hover, .dice-picker-grid::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, var(--primary-hover), #9f1237);
-        }
-
-        .btn-phrase { background-color: #4b6584; color: #ffffff; }
-        .btn-phrase:active { background-color: #3b4f68; }
-        .btn-roll { background-color: var(--success); color: #000000; }
-        .btn-roll:active { background-color: #1ca34d; }
-
-        /* 戰術主宰專用網格 */
-        .effect-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-
-        .btn-effect {
-            background-color: var(--bg-inner);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 12px 6px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-        }
-        .btn-effect:active { background-color: var(--border-color); }
-
-        .manual-field-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 8px;
-        }
-        .manual-field {
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            background: var(--bg-card);
-            color: var(--text-main);
-            padding: 14px;
-            min-height: 70px;
-            text-align: left;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-        .manual-field:hover {
-            transform: translateY(-1px);
-        }
-        .manual-field:disabled {
-            opacity: 0.55!important;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        .manual-scenario-button {
-            min-width: 104px;
-            border-radius: 10px;
-        }
-        .manual-scenario-button.active {
-            border-color: #60a5fa;
-            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
-        }
-        .manual-field[data-field-type="hit"] {
-            border-left: 4px solid #60a5fa;
-        }
-        .manual-field[data-field-type="damage"]:not([data-require-crit="true"]) {
-            border-left: 4px solid #34d399;
-        }
-        .manual-field[data-require-adv="true"] {
-            opacity: 0.96;
-        }
-        .manual-field[data-require-crit="true"] {
-            border-left: 4px solid #f59e0b;
-        }
-        .manual-field span {
-            font-size: 0.82rem;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-        }
-        .manual-field strong {
-            font-size: 1rem;
-        }
-        .manual-selected {
-            border-color: var(--secondary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
-        }
-        .manual-popup-note {
-            font-size: 0.88rem;
-            color: var(--text-muted);
-        }
-        .manual-hidden {
-            display: none;
-        }
-        .dice-picker-grid {
-            display: grid;
-            gap: 8px;
-        }
-        .dice-picker-grid--20 { grid-template-columns: repeat(10, minmax(0, 1fr)); }
-        .dice-picker-grid--10 { grid-template-columns: repeat(10, minmax(0, 1fr)); }
-        .dice-picker-grid--8 { grid-template-columns: repeat(8, minmax(0, 1fr)); }
-        .dice-picker-grid--6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-        .dice-picker-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        .dice-button {
-            border: 1px solid var(--border-color);
-            background: var(--bg-card);
-            color: var(--text-main);
-            padding: 12px 0;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            min-width: 0;
-            transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-        }
-        .dice-button:active,
-        .dice-button.dice-selected {
-            background: var(--secondary);
-            border-color: #93c5fd;
-            color: #000;
-        }
-        .manual-popup-summary {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 12px;
-            color: var(--text-main);
-            line-height: 1.4;
-            font-size: 0.92rem;
-        }
-        .manual-popup-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.55);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9;
-        }
-        .manual-popup-overlay.hidden {
-            display: none;
-        }
-        .manual-popup {
-            background: var(--bg-dark);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            width: min(95%, 740px);
-            max-height: 90vh;
-            overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-            display: flex;
-            flex-direction: column;
-        }
-        .manual-popup-header {
-            background: #111827;
-            padding: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .manual-popup-header span {
-            font-size: 1rem;
-            font-weight: 700;
-        }
-        .manual-popup-body {
-            padding: 16px;
-            overflow-y: auto;
-            display: grid;
-            gap: 12px;
-        }
-        .manual-popup-section {
-            display: grid;
-            gap: 8px;
-        }
-        .manual-popup-section-title {
-            font-weight: 700;
-            color: var(--secondary);
-            font-size: 0.95rem;
-        }
-        .manual-popup-subsection {
-            display: grid;
-            gap: 8px;
-        }
-        .manual-popup-subsection-title {
-            font-weight: 700;
-            color: var(--primary);
-            font-size: 0.92rem;
-        }
-        .manual-popup-actions {
-            display: flex;
-            gap: 10px;
-            padding: 16px;
-            border-top: 1px solid var(--border-color);
-        }
-        .manual-popup-actions .btn {
-            flex: 1;
-        }
-
-        /* 📥 右側固定底部：即時骰子面板 */
-        .log-panel {
-            background-color: #09090b;
-            border: 2px solid var(--success);
-            border-radius: var(--border-radius);
-            padding: 14px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            margin-top: auto; /* 自動推至底部 */
-            position: sticky;
-            bottom: 0;
-            z-index: 10;
-        }
-
-        .log-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 6px;
-            cursor: move;
-            user-select: none;
-        }
-
-        .log-title { font-weight: 700; color: var(--success); font-size: 0.95rem; }
-        .log-clear { font-size: 0.8rem; color: var(--text-muted); cursor: pointer; }
-        .log-toggle { font-size: 0.8rem; color: var(--text-muted); cursor: pointer; margin-left: 12px; }
-
-        .floating-log-panel {
-            position: fixed;
-            bottom: 16px;
-            right: 16px;
-            width: 420px;
-            max-height: 360px;
-            min-height: 160px;
-            min-width: 260px;
-            z-index: 50;
-            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
-            resize: both;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .log-panel.minimized {
-            max-height: 42px;
-            min-height: 42px;
-            width: 240px;
-            overflow: hidden;
-        }
-
-        .log-panel.minimized .log-content {
-            display: none;
-        }
-
-        .log-panel.minimized .log-title::after {
-            content: ' (已最小化)';
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .log-panel.dragging {
-            opacity: 0.95;
-        }
-
-        .log-content {
-            font-family: monospace;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            flex: 1;
-            min-height: 0;
-            overflow-y: auto;
-        }
-
-        .crit-alert { color: var(--primary); font-weight: bold; }
-    </style>
 </head>
 <body>
 
-    <header>
-        <h1>⚔️ 巴克 9等戰鬥實戰控制台</h1>
+    <header style="display:flex; align-items:center; justify-content:space-between;">
+        <h1 style="margin:0;">⚔️ 巴克 9等戰鬥實戰控制台</h1>
+        <button id="settings-cog" class="btn-icon" onclick="openSettingsPopup()" aria-label="Settings" title="設定">⚙️</button>
     </header>
 
     <div class="main-container">
@@ -538,28 +19,199 @@
         <!-- ⬅️ 左側欄位：資源與狀態固定監控 -->
         <div class="sidebar">
             
+            <!-- 🧾 角色資訊卡：最終屬性面板（可折疊） -->
+            <details class="char-panel" open>
+                <summary>
+                    <div>Summary</div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <!-- <div style="color:var(--text-muted); font-weight:600; font-size:0.95rem;">戰士（士兵）</div> -->
+                        <span class="chev">▶</span>
+                    </div>
+                </summary>
+                <div class="panel-body">
+                    <div id="char-panel-stats" style="margin-bottom:10px; display:grid; grid-template-columns: 1fr; gap:6px;">
+                        <!-- Populated by app.js -->
+                        <div style="font-size:0.95rem; color:var(--text-main);">Loading...</div>
+                    </div>
+                    <div class="stats-grid" style="grid-template-columns: repeat(1, 1fr); gap:8px; margin-bottom:8px;">
+                        <!-- <div class="stat-box">
+                            <span class="stat-label">🏹 長弓命中</span>
+                            <span class="stat-value" id="stat-longbow">--</span>
+                        </div> -->
+                        <!-- <div class="stat-box">
+                            <span class="stat-label">🛡️ 防禦度 (AC)</span>
+                            <span class="stat-value" id="stat-ac">--</span>
+                        </div> -->
+                        <!-- <div class="stat-box">
+                            <span class="stat-label">🩸 生命值 (HP)</span>
+                            <span class="stat-value" id="stat-hp">76 / 76</span>
+                        </div> -->
+                    </div>
+
+                        <!-- Settings popup overlay -->
+                        <div id="settings-overlay" class="manual-popup-overlay hidden" onclick="if(event.target===this){ this.classList.add('hidden'); this.style.display='none'; } if(typeof closeSettingsPopup==='function'){ closeSettingsPopup(event); }" style="position:fixed; inset:0; z-index:120;">
+                            <div id="settings-popup" class="manual-popup settings-popup" style="background:#0b1220; color:#fff; padding:18px; border-radius:8px; width:640px; max-width:95%; box-shadow:0 8px 30px rgba(0,0,0,0.6);">
+                                <div class="manual-popup-header" style="align-items:center;">
+                                    <span>設定</span>
+                                    <div style="display:flex; gap:8px; align-items:center;">
+                                        <button class="btn btn-icon" onclick="(function(){const o=document.getElementById('settings-overlay'); if(o){ o.classList.add('hidden'); o.style.display='none'; }})();">✕</button>
+                                    </div>
+                                </div>
+                                <div class="manual-popup-body settings-body" style="grid-template-columns: 1fr 1fr;">
+                                    <div style="display:flex; flex-direction:column; gap:12px;">
+                                        <div style="font-weight:700; color:var(--secondary);">匯出 / 儲存</div>
+                                        <div style="display:flex; gap:8px;">
+                                            <button class="btn" type="button" style="flex:1;" onclick="exportCharacterToFile()">匯出角色 (下載)</button>
+                                            <button class="btn" type="button" style="flex:1;" onclick="saveCharacter()">儲存到 LocalStorage</button>
+                                        </div>
+                                        <div style="font-size:0.9rem; color:var(--text-muted);">匯出可作為備份或在其他裝置匯入。儲存會覆寫瀏覽器的本地角色資料。</div>
+                                        <div style="margin-top:6px;">
+                                            <div style="font-weight:700; color:var(--secondary); margin-bottom:6px;">目前角色摘要</div>
+                                            <div id="settings-character-summary" style="font-size:0.95rem; color:var(--text-main);">--</div>
+                                            <div style="margin-top:12px; padding:10px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-card);">
+                                                <div style="font-weight:700; color:var(--secondary); margin-bottom:8px;">角色數值設定</div>
+                                                <div style="display:grid; gap:8px;">
+                                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">
+                                                            角色名稱
+                                                            <input id="settings-char-name" type="text" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" />
+                                                        </label>
+                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">
+                                                            等級
+                                                            <input id="settings-char-level" type="number" min="1" max="20" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" />
+                                                        </label>
+                                                    </div>
+                                                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:8px;">
+                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">STR<input id="settings-ability-str" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">DEX<input id="settings-ability-dex" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">CON<input id="settings-ability-con" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">INT<input id="settings-ability-int" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">WIS<input id="settings-ability-wis" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">CHA<input id="settings-ability-cha" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                                    </div>
+                                                    <div style="display:flex; gap:8px; justify-content:flex-end;">
+                                                        <button class="btn" type="button" onclick="applyCharacterSetupFromForm()">套用數值</button>
+                                                        <button class="btn" type="button" onclick="resetCharacterSetupForm()">重置</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+                                                <label style="font-weight:700; color:var(--secondary);">背景：</label>
+                                                <select id="settings-background-select" style="flex:1; padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);">
+                                                    <option value="">-- 選擇背景 --</option>
+                                                    <option value="Soldier">Soldier / 士兵</option>
+                                                    <option value="Criminal">Criminal / 罪犯</option>
+                                                    <option value="Acolyte">Acolyte / 祭司學徒</option>
+                                                </select>
+                                                <button class="btn" type="button" style="min-width:88px;" onclick="(async function(){ const s=document.getElementById('settings-background-select'); if(!s) return; const name=s.value; if(!name) return alert('請選擇背景'); const res = await applyBackgroundByName(name); if(!res) alert('找不到背景加成'); else renderSettingsSummary(); })()">套用</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; flex-direction:column; gap:12px;">
+                                        <div style="font-weight:700; color:var(--secondary);">匯入角色</div>
+                                        <div id="import-dropzone" class="import-dropzone" style="padding:12px; border:1px dashed var(--border-color); border-radius:8px; background:var(--bg-card);">
+                                            <div style="margin-bottom:8px; color:var(--text-muted);">將 JSON 檔拖曳到此處，或使用下方選擇檔案匯入。</div>
+                                            <input type="file" id="settings-char-import-file" accept="application/json,.json" />
+                                            <div style="display:flex; gap:8px; margin-top:8px;">
+                                                <button class="btn" type="button" onclick="(function(){ const el=document.getElementById('settings-char-import-file'); if(el && el.files && el.files[0]) { importCharacterFile(el.files[0]).then(()=>{ document.getElementById('settings-overlay').classList.add('hidden'); document.getElementById('settings-overlay').style.display='none'; }).catch(e=>alert('匯入失敗：'+(e.message||e))); } else alert('請先選擇一個 JSON 檔'); })()">匯入</button>
+                                                <button class="btn" type="button" onclick="(function(){ const el=document.getElementById('settings-char-import-file'); el.value=''; })()">清除選擇</button>
+                                            </div>
+                                        </div>
+                                        <div style="font-size:0.9rem; color:var(--text-muted);">匯入會覆寫目前角色數值。請先備份或儲存。</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    <details style="margin-bottom:6px;" >
+                        <summary style="font-weight:700; color:var(--secondary);">升級專長路線（4 / 6 / 8 等）</summary>
+                        <div style="margin-top:8px;">
+                            <!-- <p class="tooltip-note">長按或滑鼠停留於關鍵詞可查看術語說明。</p> -->
+                            <ol>
+                                <li><strong>4 等</strong>：<span class="keyword" data-tooltip="Great Weapon Master：可在重武器攻擊命中後追加一次額外攻擊，並提高暴擊傷害。">Great Weapon Master</span> — +1 DEX（DEX→18）</li>
+                                <li><strong>6 等</strong>：<span class="keyword" data-tooltip="Sharpshooter：可忽視遠程攻擊對中距離遮蔽的懲罰，並可額外選擇造成 -5 命中換 +10 傷害。">Sharpshooter</span> — +1 DEX（DEX→19）</li>
+                                <li><strong>8 等</strong>：<span class="keyword" data-tooltip="Mage Slayer：在附近敵人施法時可獲得額外攻擊機會，並對敵人造成法術攻擊時取得優勢。">Mage Slayer</span> — +1 DEX（DEX→20，達滿值 +5）</li>
+                            </ol>
+                        </div>
+                    </details>
+
+                    <details style="margin-bottom:6px;">
+                        <summary style="font-weight:700; color:var(--accent);">1 等天賦 / 雙專長</summary>
+                        <div style="margin-top:8px;">
+                            <!-- <p class="tooltip-note">停留或長按下列關鍵詞以查看深入說明。</p> -->
+                            <ul>
+                                <li><span class="keyword" data-tooltip="Savage Attacker：當你造成武器傷害時，可重擲傷害骰一次，並選擇較高值。">Savage Attacker</span>：1d8 遠程傷害在 1-2 可重骰取高。</li>
+                                <li><span class="keyword" data-tooltip="Lucky：每日 4 次幸運點，可用於重新擲一個 d20 或使敵方攻擊重擲。">Lucky</span>：每日 4 點幸運點，提供擲骰控制。</li>
+                                <li><span class="keyword" data-tooltip="Heroic Inspiration：長休後獲得一次重骰機會，可對攻擊檢定、能力檢定或豁免檢定使用。">Heroic Inspiration</span>：長休後獲得一次重骰機會。</li>
+                            </ul>
+                        </div>
+                    </details>
+
+                    <details>
+                        <summary style="font-weight:700; color:#f59e0b;">9 等最終數據（快速一覽）</summary>
+                        <div style="margin-top:8px;">
+                            <!-- <p class="tooltip-note">將游標移到數值前詞彙，可查看其來源與計算方式。</p> -->
+                            <ul>
+                                <li><span class="keyword" data-tooltip="箭術命中：DEX +5、熟練 +4、射手風格 +2。">長弓命中：<span id="summary-longbow-hit">--</span></span>（DEX +5 / 熟練 +4 / 射手風格 +2）</li>
+                                <li><span class="keyword" data-tooltip="盜賊工具：藉由熟練加值可在鎖匠與陷阱上擲出 +9。">盜賊工具（開鎖/陷阱）：+9</span></li>
+                                <li><span class="keyword" data-tooltip="潛行技能可加上 DEX +5、熟練 +4。鑲釘皮甲不阻礙潛行。">潛行：+9</span>（戴鑲釘皮甲不阻礙）</li>
+                                <li><span class="keyword" data-tooltip="護甲類型：鑲釘皮甲 12 + DEX 5 + 防禦風格 1。">AC：<span id="summary-ac">--</span></span>（鑲釘皮甲 12 + DEX 5 + 防禦風格 1）</li>
+                                <li><span class="keyword" data-tooltip="最大生命值由戰士 9 等的生命骰與體質加值組成。">Max HP：<span id="summary-max-hp">--</span></span></li>
+                            </ul>
+                        </div>
+                    </details>
+
+                    <details style="margin-top:8px;">
+                        <summary style="font-weight:700; color:var(--accent);">9 等戰士特性速查</summary>
+                        <div style="margin-top:8px; line-height:1.5; font-size:0.95rem;">
+                            <p class="tooltip-note">懸停或長按特定詞彙可查看詳細效果。</p>
+                            <ul>
+                                <li><strong>等級 1</strong>：<span class="keyword" data-tooltip="戰鬥風格：首次選擇一項戰鬥風格，之後每次升級可更換。推薦防禦風格以提升 AC。">戰鬥風格</span>，選擇一項戰鬥風格，建議防禦；每次升級可更換。</li>
+                                <li><strong>等級 1</strong>：<span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值。短休後可使用一次，長休恢復。">回氣</span>，附贈動作恢復 1d10 + 戰士等級生命值，短休恢復 1 次，長休恢復所有。</li>
+                                <li><strong>等級 1</strong>：<span class="keyword" data-tooltip="武器精通：可在三種簡易或軍用武器中選擇精通，長休後可更換一種。">武器精通</span>，選三種簡易或軍用精通武器，長休可改選一種。</li>
+                                <li><strong>等級 2</strong>：<span class="keyword" data-tooltip="動作如潮：本回合可額外獲得一個動作。短休或長休後恢復。17 級後每次休息可用 2 次。">動作如潮</span>，本回合可額外獲得一個動作，短休或長休後恢復；17 級後每次休息可用 2 次。</li>
+                                <li><strong>等級 2</strong>：<span class="keyword" data-tooltip="戰術思維：當屬性檢定失敗時，消耗回氣加上 1d10 的結果，嘗試接近成功。">戰術思維</span>，屬性檢定失敗時可消耗一次回氣，加入 1d10 以接近成功。</li>
+                                <li><strong>等級 3</strong>：<span class="keyword" data-tooltip="選擇戰士子職，並獲得其對應能力，例如誓約之王、狂戰士等。">選擇戰士子職</span>，並獲得其對應能力。</li>
+                                <li><strong>等級 3</strong>：<span class="keyword" data-tooltip="精通重擊：武器或重擊攻擊 19-20 即為暴擊。">精通重擊</span>，武器或重擊攻擊 19-20 即暴擊。</li>
+                                <li><strong>等級 3</strong>：<span class="keyword" data-tooltip="運動健將：先攻與某些力量檢定具優勢；重擊後可移動一半速度且不引發借機攻擊。">運動健將</span>，先攻與力量（運動）檢定具優勢；重擊後可移動一半速度且不引發借機攻擊。</li>
+                                <li><strong>等級 4</strong>：能力值提升，可提升屬性值或選專長。</li>
+                                <li><strong>等級 5</strong>：額外攻擊，攻擊動作可攻擊兩次。</li>
+                                <li><strong>等級 5</strong>：<span class="keyword" data-tooltip="戰術轉進：使用回氣附贈動作時可移動一半速度且不引發借機攻擊。">戰術轉進</span>，使用回氣附贈動作時可移動一半速度且不引發借機攻擊。</li>
+                                <li><strong>等級 6</strong>：能力值提升。</li>
+                                <li><strong>等級 7</strong>：額外戰鬥風格，獲得另一項戰鬥風格。</li>
+                                <li><strong>等級 8</strong>：能力值提升。</li>
+                                <li><strong>等級 9</strong>：<span class="keyword" data-tooltip="不屈：豁免檢定失敗時可重投，並加上戰士等級的固定值。須採用新結果，長休恢復。">不屈</span>，豁免失敗時重投並加上戰士等級，須使用新結果；長休後恢復使用次數。</li>
+                                <li><strong>等級 9</strong>：<span class="keyword" data-tooltip="戰術主宰：命中時可將精通詞條效果改為推離、削弱或緩速三選一。">戰術主宰</span>，攻擊時可將精通詞條效果改為推離、削弱或緩速之一。</li>
+                            </ul>
+                        </div>
+                    </details>
+                </div>
+            </details>
+
             <!-- 📊 基礎防禦與機制 -->
             <div class="card">
+                <!-- <p class="tooltip-note">將游標移到數值前詞彙，可查看其來源與計算方式。</p> -->
                 <div class="stats-grid">
                     <div class="stat-box">
                         <span class="stat-label">🛡️ 防禦度 (AC)</span>
-                        <span class="stat-value">18</span>
+                        <span class="stat-value" id="stat-ac">--</span>
                     </div>
                     <div class="stat-box">
                         <span class="stat-label">⚡ 先攻檢定</span>
-                        <span class="stat-value" style="color:var(--secondary)">永久優勢</span>
+                        <span class="stat-value" style="color:var(--secondary)"><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">永久優勢</span></span>
                     </div>
                     <div class="stat-box" style="grid-column: span 2; border-left: 3px solid var(--primary);">
                         <span class="stat-label">🎯 暴擊要求</span>
-                        <span class="stat-value" style="color:var(--primary); font-size:1.05rem;">d20 擲出 19-20 即暴擊！</span>
+                        <span class="stat-value" style="color:var(--primary); font-size:1.05rem;">d20 擲出 19-20 即<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>！</span>
                     </div>
                 </div>
             </div>
 
             <!-- 🩸 HP 狀態管理 -->
             <div class="card">
-                <span class="stat-label">🩸 當前生命值 (Max: 76)</span>
-                <div class="hp-display"><span id="curr-hp">76</span> / 76</div>
+                <!-- <p class="tooltip-note">將游標移到數值前詞彙，可查看其來源與計算方式。</p> -->
+                <span class="stat-label" >🩸 當前生命值 (Max: <span id="hp-max-label">--</span>)</span>
+                <div class="hp-display"><span id="curr-hp">--</span> / <span id="max-hp-display">--</span></div>
                 <div class="hp-controls">
                     <button class="hp-btn" onclick="modHP(-5)">-5</button>
                     <button class="hp-btn" onclick="modHP(-1)">-1</button>
@@ -570,9 +222,19 @@
 
             <!-- 🔋 大招資源追蹤 -->
             <div class="card" style="flex: 1;">
+                <!-- <p class="tooltip-note">將游標移到數值前詞彙，可查看其來源與計算方式。</p> -->
                 <span class="stat-label" style="font-size:0.9rem; color:#fff; font-weight:700; margin-bottom:8px;">🔋 核心資源追蹤</span>
+                <div class="tracker-row" data-resource="secondwind">
+                    <span><span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值。短休後可使用一次，長休恢復。">🩸 回氣</span> (長休 4 次)</span>
+                    <div class="checkbox-group" data-resource-group="secondwind">
+                        <input type="checkbox" class="tracker-checkbox">
+                        <input type="checkbox" class="tracker-checkbox">
+                        <input type="checkbox" class="tracker-checkbox">
+                        <input type="checkbox" class="tracker-checkbox">
+                    </div>
+                </div>
                 <div class="tracker-row">
-                    <span>🩸 回氣 (長休 4 次)</span>
+                    <span>🍀 <span class="keyword" data-tooltip="Lucky：每日 4 次幸運點，可用於重新擲一個 d20 或使敵方攻擊重擲。">Lucky</span>：每日 4 點幸運點，提供擲骰控制。</li></span>
                     <div class="checkbox-group">
                         <input type="checkbox" class="tracker-checkbox">
                         <input type="checkbox" class="tracker-checkbox">
@@ -581,13 +243,18 @@
                     </div>
                 </div>
                 <div class="tracker-row">
-                    <span>存放：動作如潮 (短/長休 1 次)</span>
+                    <span>⭐ <span class="keyword" data-tooltip="Heroic Inspiration：長休後獲得一次重骰機會，可對攻擊檢定、能力檢定或豁免檢定使用。">英雄激勵</span> (長休 1 次)</span>
                     <input type="checkbox" class="tracker-checkbox">
                 </div>
-                <div class="tracker-row">
-                    <span>🛡️ 反應：不屈重投 (長休 1 次)</span>
-                    <input type="checkbox" class="tracker-checkbox">
+                <div class="tracker-row" data-resource="action-surge">
+                    <span>🕺🏻 <span class="keyword" data-tooltip="動作如潮：本回合可額外獲得一個動作。短休或長休後恢復。17 級後每次休息可用 2 次。">動作如潮</span> (短/長休 1 次)</span>
+                    <input type="checkbox" class="tracker-checkbox" data-resource-group="action-surge">
                 </div>
+                <div class="tracker-row" data-resource="unyielding">
+                    <span>🛡️ 反應：<span class="keyword" data-tooltip="不屈：豁免檢定失敗時可重投，並加上戰士等級的固定值。須採用新結果，長休恢復。">不屈重投</span> (長休 1 次)</span>
+                    <input type="checkbox" class="tracker-checkbox" data-resource-group="unyielding">
+                </div>
+                <!-- settings popup is available via the cog button in the header -->
             </div>
 
         </div>
@@ -602,16 +269,16 @@
                     <span class="step-badge">二選一</span>
                 </div>
                 <div class="action-card">
-                    <div class="action-name">🏹 宣告誓約之敵</div>
-                    <div class="action-desc">射擊永久自帶優勢、無視半掩體、命中加 3d6 傷害。</div>
+                    <div class="action-name">🏹 <span class="keyword" data-tooltip="誓約之敵：附贈動作宣告目標為你的誓約之敵，攻擊該目標通常獲得優勢並造成額外誓約傷害。">宣告誓約之敵</span></div>
+                    <div class="action-desc">射擊永久自帶<span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>、無視半掩體、命中加 3d6 傷害。</div>
                     <button class="btn btn-phrase" onclick="copyText('我用附贈動作對 Boss 宣告誓約弓鎖定。')">📋 複製台詞報給 DM</button>
                 </div>
                 <div class="action-card">
-                    <div class="action-name">🩸 啟動回氣補血</div>
+                    <div class="action-name">🩸 <span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值，短休後可使用一次，長休可恢復全部。">啟動回氣補血</span></div>
                     <div class="action-desc">恢復 1d10+9 生命，免費瞬移 15 呎且不引發借機。</div>
                     <div class="btn-group">
                         <button class="btn btn-phrase" onclick="copyText('我用附贈動作啟動【回氣】，恢復生命值，並觸發【戰術轉進】免費瞬移 15 呎不引發借機！')">📋 複製台詞</button>
-                        <button class="btn btn-roll" style="background:#475569;" onclick="openManualPopup('secondwind')">🛠 手動骰輸入</button>
+                        <button class="btn btn-roll" style="background:#475569;"  onclick="openManualPopup('secondwind')">🛠 手動骰輸入</button>
                         <!-- <button class="btn btn-roll" onclick="rollSecondWind()">🎲 補血計算</button> -->
                     </div>
                 </div>
@@ -624,7 +291,7 @@
                     <span class="step-badge">二次攻擊 / 二選一</span>
                 </div>
                 <div class="action-card">
-                    <div class="action-name">🏹 遠程：誓約弓雙發連射</div>
+                    <div class="action-name">🏹 <span class="keyword" data-tooltip="誓約弓：使用誓約劍射擊，對誓約之敵命中時額外造成誓約傷害，且通常可獲得攻擊優勢。">遠程：誓約弓雙發連射</span></div>
                     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
                     </div>
                     <div class="btn-group" style="margin-bottom: 8px;">
@@ -675,7 +342,7 @@
             <!-- 第三步 -->
             <div class="card">
                 <div class="step-header">
-                    <span class="step-title">第三步：命中時特效宣告 (戰術主宰)</span>
+                    <span class="step-title">第三步：命中時特效宣告 (<span class="keyword" data-tooltip="戰術主宰：命中時可將精通詞條效果改為推離、削弱或緩速三選一。">戰術主宰</span>)</span>
                     <span class="step-badge">命中時任選一</span>
                 </div>
                 <div class="effect-grid">
@@ -693,7 +360,7 @@
 
             <!-- 第四步 -->
             <div class="card" style="border: 1px solid var(--primary); background-color: #271418;">
-                <div class="step-header"><span class="step-title" style="color:var(--primary)">第四步：🔥 骰出 19-20 暴擊特典</span></div>
+                <div class="step-header"><span class="step-title" style="color:var(--primary)">第四步：🔥 骰出 19-20 <span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>特典</span></div>
                 <div class="btn-group">
                     <button class="btn btn-phrase" onclick="copyText('我暴擊了！所有傷害骰子數量翻倍！並觸發【運動健將】立刻免費移動 15 呎且不引發任何借機攻擊！')">📋 複製暴擊高喊台詞</button>
                     <button class="btn btn-roll" style="background:#475569;" onclick="openManualPopup('crit')">🛠 手動骰輸入</button>
@@ -704,8 +371,8 @@
             <div class="card" style="border: 1px dashed var(--accent);">
                 <div class="step-title" style="color:var(--accent); margin-bottom:8px;">🚨 爆發大招 & 敵方回合反應</div>
                 <div class="btn-group">
-                    <button class="btn btn-phrase" style="background-color:#6c5ce7;" onclick="copyText('我啟動【動作如潮】，這回合多獲得一個主要動作！主要動作拿誓約弓狂暴連射 4 箭！')">💥 宣告【動作如潮】(射4箭)</button>
-                    <button class="btn btn-phrase" style="background-color:#a855f7;" onclick="copyText('我啟動 9 等【不屈】重投這一次豁免，並且在新的結果上無條件 +9 點！')">🛡️ 敵方回合：啟動【不屈重投】</button>
+                    <button class="btn btn-phrase" style="background-color:#6c5ce7;" data-track-resource="action-surge" onclick="copyText('我啟動【動作如潮】，這回合多獲得一個主要動作！主要動作拿誓約弓狂暴連射 4 箭！')">💥 宣告【<span class="keyword" data-tooltip="動作如潮：本回合可額外獲得一個動作。短休或長休後恢復。17 級後每次休息可用 2 次。">動作如潮</span>】(射4箭)</button>
+                    <button class="btn btn-phrase" style="background-color:#a855f7;" data-track-resource="unyielding" onclick="copyText('我啟動 9 等【不屈】重投這一次豁免，並且在新的結果上無條件 +9 點！')">🛡️ 敵方回合：啟動【<span class="keyword" data-tooltip="不屈：豁免檢定失敗時可重投，並加上戰士等級的固定值。須採用新結果，長休恢復。">不屈重投</span>】</button>
                 </div>
             </div>
 
@@ -728,6 +395,7 @@
 
     </div>
 
+    <div id="tooltip-popup" class="tooltip-popup" aria-hidden="true"></div>
     <div id="manual-popup-overlay" class="manual-popup-overlay hidden" onclick="closeManualPopup(event)">
         <div class="manual-popup" onclick="event.stopPropagation()">
             <div class="manual-popup-header">
@@ -738,19 +406,19 @@
                 <div class="manual-popup-section">
                     <div class="manual-popup-section-title">步驟 1：選擇場景</div>
                     <div class="btn-group manual-scenario-group" style="flex-wrap: wrap; gap: 8px;">
-                        <button id="manual-scenario-secondwind" class="btn btn-roll manual-scenario-button" onclick="setManualScenario('secondwind')">🩸 回氣</button>
+                        <button id="manual-scenario-secondwind" class="btn btn-roll manual-scenario-button" onclick="setManualScenario('secondwind')">🩸 <span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值。短休後可使用一次，長休恢復。">回氣</span></button>
                         <button id="manual-scenario-ranged" class="btn btn-roll manual-scenario-button" onclick="setManualScenario('ranged')">🏹 遠程</button>
                         <button id="manual-scenario-melee" class="btn btn-roll manual-scenario-button" onclick="setManualScenario('melee')">⚔️ 近戰</button>
                     </div>
                     <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
                         <div class="manual-popup-note">目前場景：<strong id="manual-scenario-label">遠程</strong></div>
-                        <label class="manual-checkbox"><input type="checkbox" id="manual-advantage-popup" onclick="updateManualFieldsVisibility()"> 優勢</label>
+                        <label class="manual-checkbox"><input type="checkbox" id="manual-advantage-popup" onclick="updateManualFieldsVisibility()"> <span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span></label>
                         <!-- <label class="manual-checkbox"><input type="checkbox" id="manual-crit-popup" onclick="updateManualFieldsVisibility()"> 暴擊</label> -->
                     </div>
                 </div>
                 <div class="manual-popup-section">
                     <div class="manual-popup-section-title">步驟 2：選擇骰子欄位</div>
-                    <div class="manual-popup-summary" id="manual-field-help">請先點擊一個骰子欄位，然後在下方直接選擇數值。暴擊欄位會在 19-20 命中時自動顯示。</div>
+                    <div class="manual-popup-summary" id="manual-field-help">請先點擊一個骰子欄位，然後在下方直接選擇數值。<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>欄位會在 19-20 命中時自動顯示。</div>
                     <div class="manual-popup-note" style="display:flex; flex-wrap:wrap; gap:12px;">
            
                     </div>
@@ -758,28 +426,28 @@
                         <div class="manual-popup-subsection-title">命中骰</div>
                         <div class="manual-field-grid">
                             <button type="button" class="manual-field" id="manual-ranged-d20" data-attack-group="ranged" data-scenarios="ranged" data-field-type="hit" data-dice="20" onclick="selectManualField('manual-ranged-d20')">
-                                <span>遠程 d20 +9</span><strong id="label-manual-ranged-d20">未選</strong>
+                                <span>遠程 d20 +11</span><strong id="label-manual-ranged-d20">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-ranged-d20-adv-2" data-attack-group="ranged" data-scenarios="ranged" data-field-type="hit" data-require-adv="true" data-dice="20" onclick="selectManualField('manual-ranged-d20-adv-2')">
-                                <span>優勢第2顆 d20</span><strong id="label-manual-ranged-d20-adv-2">未選</strong>
+                                <span><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>第2顆 d20</span><strong id="label-manual-ranged-d20-adv-2">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-melee-h1" data-attack-group="1" data-scenarios="melee" data-field-type="hit" data-dice="20" onclick="selectManualField('manual-melee-h1')">
                                 <span>近戰主手 d20 ①</span><strong id="label-manual-melee-h1">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-melee-h1-adv" data-attack-group="1" data-scenarios="melee" data-field-type="hit" data-require-adv="true" data-dice="20" onclick="selectManualField('manual-melee-h1-adv')">
-                                <span>優勢主手 d20 ①</span><strong id="label-manual-melee-h1-adv">未選</strong>
+                                <span><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>主手 d20 ①</span><strong id="label-manual-melee-h1-adv">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-melee-h2" data-attack-group="2" data-scenarios="melee" data-field-type="hit" data-dice="20" onclick="selectManualField('manual-melee-h2')">
                                 <span>近戰主手 d20 ②</span><strong id="label-manual-melee-h2">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-melee-h2-adv" data-attack-group="2" data-scenarios="melee" data-field-type="hit" data-require-adv="true" data-dice="20" onclick="selectManualField('manual-melee-h2-adv')">
-                                <span>優勢主手 d20 ②</span><strong id="label-manual-melee-h2-adv">未選</strong>
+                                <span><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>主手 d20 ②</span><strong id="label-manual-melee-h2-adv">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-melee-h3" data-attack-group="3" data-scenarios="melee" data-field-type="hit" data-dice="20" onclick="selectManualField('manual-melee-h3')">
                                 <span>近戰副手 d20</span><strong id="label-manual-melee-h3">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-melee-h3-adv" data-attack-group="3" data-scenarios="melee" data-field-type="hit" data-require-adv="true" data-dice="20" onclick="selectManualField('manual-melee-h3-adv')">
-                                <span>優勢副手 d20</span><strong id="label-manual-melee-h3-adv">未選</strong>
+                                <span><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>副手 d20</span><strong id="label-manual-melee-h3-adv">未選</strong>
                             </button>
                         </div>
                     </div>
@@ -790,7 +458,7 @@
                                 <span>遠程傷害 d8</span><strong id="label-manual-ranged-d8">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-secondwind-d10" data-attack-group="secondwind" data-scenarios="secondwind" data-field-type="damage" data-dice="10" onclick="selectManualField('manual-secondwind-d10')">
-                                <span>回氣 d10</span><strong id="label-manual-secondwind-d10">未選</strong>
+                                <span><span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值。短休後可使用一次，長休恢復。">回氣</span> d10</span><strong id="label-manual-secondwind-d10">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-melee-d1" data-attack-group="1" data-scenarios="melee" data-field-type="damage" data-dice="6" onclick="selectManualField('manual-melee-d1')">
                                 <span>主手傷害 ①</span><strong id="label-manual-melee-d1">未選</strong>
@@ -804,13 +472,13 @@
                         </div>
                     </div>
                     <div class="manual-popup-subsection">
-                        <div class="manual-popup-subsection-title">遠程暴擊傷害</div>
+                        <div class="manual-popup-subsection-title">遠程<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>傷害</div>
                         <div class="manual-field-grid">
                             <button type="button" class="manual-field" id="manual-ranged-crit-d8-1" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-crit-target="ranged" data-dice="8" onclick="selectManualField('manual-ranged-crit-d8-1')">
-                                <span>暴擊 d8 ①</span><strong id="label-manual-ranged-crit-d8-1">未選</strong>
+                                <span><span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span> d8 ①</span><strong id="label-manual-ranged-crit-d8-1">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-ranged-crit-d8-2" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-crit-target="ranged" data-dice="8" onclick="selectManualField('manual-ranged-crit-d8-2')">
-                                <span>暴擊 d8 ②</span><strong id="label-manual-ranged-crit-d8-2">未選</strong>
+                                <span><span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span> d8 ②</span><strong id="label-manual-ranged-crit-d8-2">未選</strong>
                             </button>
                             <button type="button" class="manual-field" id="manual-ranged-crit-6d6-1" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-require-adv="true" data-crit-target="ranged" data-dice="6" onclick="selectManualField('manual-ranged-crit-6d6-1')">
                                 <span>誓約暴擊 d6 ①</span><strong id="label-manual-ranged-crit-6d6-1">未選</strong>
@@ -886,7 +554,7 @@
                 </div>
                 <div class="manual-popup-section">
                     <div class="manual-popup-section-title">規則速查</div>
-                    <div class="manual-popup-note">優勢時取最高 d20；19-20 為暴擊；暴擊時所有傷害骰翻倍。</div>
+                    <div class="manual-popup-note"><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>時取最高 d20；19-20 為<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>；<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>時所有傷害骰翻倍。</div>
                 </div>
             </div>
             <div class="manual-popup-actions">
@@ -898,1152 +566,7 @@
         </div>
     </div>
 
-    <script>
-        // HP 管理
-        class BattleModel {
-            constructor(initialState = {}) {
-                this.state = {
-                    maxHp: initialState.maxHp ?? 76,
-                    currentHp: initialState.currentHp ?? 76,
-                    battleLog: initialState.battleLog ?? [],
-                    isLogMinimized: false,
-                    logPanelPosition: {
-                        left: '24px',
-                        top: '24px',
-                        right: 'auto',
-                        bottom: 'auto'
-                    }
-                };
-            }
+        <script type="module" src="app.js"></script>
 
-            getSnapshot() {
-                return {
-                    ...this.state,
-                    battleLog: [...this.state.battleLog]
-                };
-            }
-
-            adjustHp(delta) {
-                this.state.currentHp = Math.max(0, Math.min(this.state.maxHp, this.state.currentHp + delta));
-            }
-
-            recordEvent(entry) {
-                this.state.battleLog.push(entry);
-            }
-
-            clearEvents() {
-                this.state.battleLog = [];
-            }
-
-            toggleLogMinimized() {
-                this.state.isLogMinimized = !this.state.isLogMinimized;
-            }
-
-            setLogPanelPosition(left, top) {
-                this.state.logPanelPosition = { left, top, right: 'auto', bottom: 'auto' };
-            }
-
-            getLogText() {
-                return this.state.battleLog.map(entry => entry.text).join('\r\n');
-            }
-        }
-
-        class BattleView {
-            constructor() {
-                this.hpNode = document.getElementById('curr-hp');
-                this.logBox = document.getElementById('log-box');
-                this.logPanel = document.getElementById('floating-log-panel');
-                this.header = document.getElementById('log-panel-header');
-            }
-
-            render(state) {
-                if (this.hpNode) {
-                    this.hpNode.innerText = state.currentHp;
-                }
-                if (this.logBox) {
-                    if (state.battleLog.length === 0) {
-                        this.logBox.innerHTML = '日誌已清空。';
-                    } else {
-                        this.logBox.innerHTML = state.battleLog.map(entry => entry.html).join('<br>');
-                    }
-                    this.logBox.scrollTop = this.logBox.scrollHeight;
-                }
-                if (this.logPanel) {
-                    this.logPanel.classList.toggle('minimized', Boolean(state.isLogMinimized));
-                    const position = state.logPanelPosition || {};
-                    this.logPanel.style.left = position.left ?? '24px';
-                    this.logPanel.style.top = position.top ?? '24px';
-                    this.logPanel.style.right = position.right ?? 'auto';
-                    this.logPanel.style.bottom = position.bottom ?? 'auto';
-                }
-            }
-        }
-
-        class BattleViewModel {
-            constructor(model, view) {
-                this.model = model;
-                this.view = view;
-                this.dragState = { active: false, offsetX: 0, offsetY: 0 };
-            }
-
-            initialize() {
-                this.view.render(this.model.getSnapshot());
-                if (this.view.header) {
-                    this.view.header.addEventListener('mousedown', (event) => this.startLogDrag(event));
-                    this.view.header.addEventListener('touchstart', (event) => this.startLogDrag(event), { passive: false });
-                }
-                document.addEventListener('mousemove', (event) => this.dragLog(event));
-                document.addEventListener('mouseup', () => this.stopLogDrag());
-                document.addEventListener('touchmove', (event) => this.dragLog(event), { passive: false });
-                document.addEventListener('touchend', () => this.stopLogDrag());
-            }
-
-            stripHtml(html) {
-                const tmp = document.createElement('div');
-                tmp.innerHTML = html;
-                return tmp.textContent || tmp.innerText || '';
-            }
-
-            modHP(amt) {
-                const before = this.model.state.currentHp;
-                this.model.adjustHp(amt);
-                const after = this.model.state.currentHp;
-                const changeText = amt > 0 ? `+${amt}` : `${amt}`;
-                const tone = amt >= 0 ? 'var(--success)' : 'var(--primary)';
-                this.log(`<span style='color:${tone}'>[HP 變更] ${changeText} → ${before} → ${after}</span>`);
-                this.view.render(this.model.getSnapshot());
-            }
-
-            appendLog(html) {
-                const text = this.stripHtml(html).replace(/\u00A0/g, ' ');
-                this.model.recordEvent({ html, text });
-                this.view.render(this.model.getSnapshot());
-            }
-
-            log(msg) {
-                this.appendLog(msg);
-            }
-
-            copyText(txt) {
-                navigator.clipboard.writeText(txt).then(() => {
-                    this.log("<span style='color:var(--secondary)'>[已複製台詞]</span> 「" + txt + "」");
-                }).catch(() => {
-                    alert("複製失敗：" + txt);
-                });
-            }
-
-            clearLog() {
-                this.model.clearEvents();
-                this.view.render(this.model.getSnapshot());
-            }
-
-            exportLog() {
-                const entries = this.model.getSnapshot().battleLog;
-                if (entries.length === 0) {
-                    alert('目前日誌為空，無法匯出。');
-                    return;
-                }
-                const text = entries.map(entry => entry.text).join('\r\n');
-                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `battle_log_${new Date().toISOString().slice(0,10)}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-
-            toggleLogMinimize(event) {
-                event.stopPropagation();
-                this.model.toggleLogMinimized();
-                this.view.render(this.model.getSnapshot());
-            }
-
-            startLogDrag(event) {
-                if (!this.view.logPanel) return;
-                const target = event.target;
-                if (target && (target.closest?.('.log-clear') || target.closest?.('.log-toggle'))) {
-                    return;
-                }
-                const touch = event.touches ? event.touches[0] : null;
-                const clientX = touch ? touch.clientX : event.clientX;
-                const clientY = touch ? touch.clientY : event.clientY;
-                this.dragState.active = true;
-                this.dragState.offsetX = clientX - this.view.logPanel.offsetLeft;
-                this.dragState.offsetY = clientY - this.view.logPanel.offsetTop;
-                this.view.logPanel.classList.add('dragging');
-                if (event.touches) {
-                    event.preventDefault();
-                }
-            }
-
-            stopLogDrag() {
-                if (!this.dragState.active) return;
-                this.dragState.active = false;
-                if (this.view.logPanel) {
-                    this.view.logPanel.classList.remove('dragging');
-                }
-            }
-
-            dragLog(event) {
-                if (!this.dragState.active || !this.view.logPanel) return;
-                const touch = event.touches ? event.touches[0] : null;
-                const clientX = touch ? touch.clientX : event.clientX;
-                const clientY = touch ? touch.clientY : event.clientY;
-                let x = clientX - this.dragState.offsetX;
-                let y = clientY - this.dragState.offsetY;
-                const maxX = window.innerWidth - this.view.logPanel.offsetWidth;
-                const maxY = window.innerHeight - this.view.logPanel.offsetHeight;
-                x = Math.max(0, Math.min(maxX, x));
-                y = Math.max(0, Math.min(maxY, y));
-                this.model.setLogPanelPosition(`${x}px`, `${y}px`);
-                this.view.render(this.model.getSnapshot());
-                if (event.touches) {
-                    event.preventDefault();
-                }
-            }
-        }
-
-        const battleModel = new BattleModel({ currentHp: 76, maxHp: 76 });
-        const battleView = new BattleView();
-        const battleViewModel = new BattleViewModel(battleModel, battleView);
-        battleViewModel.initialize();
-
-        function modHP(amt) {
-            battleViewModel.modHP(amt);
-        }
-
-        function copyText(txt) {
-            battleViewModel.copyText(txt);
-        }
-
-        function appendLog(html) {
-            battleViewModel.appendLog(html);
-        }
-
-        function log(msg) {
-            battleViewModel.log(msg);
-        }
-
-        function clearLog() {
-            battleViewModel.clearLog();
-        }
-
-        function exportLog() {
-            battleViewModel.exportLog();
-        }
-
-        function toggleLogMinimize(event) {
-            battleViewModel.toggleLogMinimize(event);
-        }
-
-        function startLogDrag(event) {
-            battleViewModel.startLogDrag(event);
-        }
-
-        function stopLogDrag() {
-            battleViewModel.stopLogDrag();
-        }
-
-        function dragLog(event) {
-            battleViewModel.dragLog(event);
-        }
-
-        window.battleApp = battleViewModel;
-
-        // 骰子計算
-        function roll(sides) {
-            return Math.floor(Math.random() * sides) + 1;
-        }
-
-        function parseActualNumber(id, defaultValue) {
-            const value = parseInt(document.getElementById(id).value, 10);
-            return Number.isFinite(value) ? value : defaultValue;
-        }
-
-        const manualValues = {};
-        const manualMissFlags = {};
-        let currentManualField = null;
-        let manualScenario = 'ranged';
-
-        function isManualMiss(id) {
-            return manualMissFlags[id] === true;
-        }
-
-        function getManualNumber(id, min, max) {
-            const value = parseInt(manualValues[id], 10);
-            return Number.isFinite(value) && value >= min && value <= max ? value : null;
-        }
-
-        function getManualHitValue(id) {
-            if (isManualMiss(id)) return 'miss';
-            return getManualNumber(id, 1, 20);
-        }
-
-        function getManualDamageValue(id, max) {
-            if (isManualMiss(id)) return 0;
-            return getManualNumber(id, 1, max);
-        }
-
-        function resolveManualHit(primary, adv) {
-            if (primary === 'miss' && adv === 'miss') return 'miss';
-            if (primary === 'miss') return adv;
-            if (adv === 'miss') return primary;
-            if (primary == null) return adv;
-            if (adv == null) return primary;
-            return Math.max(primary, adv);
-        }
-
-        function isManualMeleeCrit(index, advOn) {
-            const h = getManualHitValue(`manual-melee-h${index}`);
-            const hAdv = getManualHitValue(`manual-melee-h${index}-adv`);
-            let final = null;
-            if (advOn) {
-                if (h != null && hAdv != null) final = Math.max(h, hAdv);
-                else if (h != null) final = h;
-                else if (hAdv != null) final = hAdv;
-            } else {
-                final = h != null ? h : null;
-            }
-            return typeof final === 'number' && final >= 19;
-        }
-
-        function isManualRangedCrit(advOn) {
-            const d20 = getManualHitValue('manual-ranged-d20');
-            const d20_2 = advOn ? getManualHitValue('manual-ranged-d20-adv-2') : null;
-            const final = resolveManualHit(d20, d20_2);
-            return typeof final === 'number' && final >= 19;
-        }
-
-        function isRangedOathBowField(field) {
-            return Boolean(field && /^manual-ranged-oath-3d6-\d+$/.test(field.id));
-        }
-
-        function isRangedCrit6d6Field(field) {
-            return Boolean(field && /^manual-ranged-crit-6d6-\d+$/.test(field.id));
-        }
-
-        function getRangedCritFormulaText(field, advOn) {
-            if (!field || manualScenario !== 'ranged') return null;
-            const critActive = isManualRangedCrit(advOn);
-            if (!critActive) return null;
-            if (isRangedOathBowField(field)) return '2d8 + 6d6 + 5';
-            if (field.id === 'manual-ranged-d8') return `2d${field.dataset.dice || '8'} + 5`;
-            return null;
-        }
-
-        function isRangedCritFormulaField(field, advOn) {
-            return Boolean(getRangedCritFormulaText(field, advOn));
-        }
-
-        function setManualMiss(id) {
-            manualMissFlags[id] = true;
-            const label = document.getElementById(`label-${id}`);
-            if (!label) return;
-            const field = document.getElementById(id);
-            if (field && field.dataset.fieldType === 'damage') {
-                label.innerText = '0(未命中)';
-            } else {
-                const value = getManualNumber(id, 1, 20);
-                label.innerText = value != null ? `${value}(未命中)` : 'X(未命中)';
-            }
-        }
-
-        function clearManualMiss(id) {
-            if (!manualMissFlags[id]) return;
-            delete manualMissFlags[id];
-            const label = document.getElementById(`label-${id}`);
-            if (!label) return;
-            const field = document.getElementById(id);
-            const maxValue = field?.dataset.fieldType === 'damage'
-                ? parseInt(field.dataset.dice || '0', 10)
-                : 20;
-            const value = getManualNumber(id, 1, maxValue);
-            if (value != null) {
-                label.innerText = value;
-            } else {
-                label.innerText = '未選';
-            }
-        }
-
-        function clearRelatedMissForField(field) {
-            if (!field) return;
-            const id = field.id;
-            if (field.dataset.fieldType === 'hit') {
-                if (id === 'manual-ranged-d20' || id === 'manual-ranged-d20-adv-2') {
-                    clearManualMiss('manual-ranged-d8');
-                }
-                const meleeIndex = id.match(/^manual-melee-h(\d+)/)?.[1];
-                if (meleeIndex) {
-                    clearManualMiss(`manual-melee-d${meleeIndex}`);
-                }
-            } else if (field.dataset.fieldType === 'damage') {
-                if (id === 'manual-ranged-d8') {
-                    clearManualMiss('manual-ranged-d20');
-                    clearManualMiss('manual-ranged-d20-adv-2');
-                }
-                if (id.startsWith('manual-melee-d')) {
-                    const idx = id.slice(-1);
-                    clearManualMiss(`manual-melee-h${idx}`);
-                    clearManualMiss(`manual-melee-h${idx}-adv`);
-                }
-            }
-        }
-
-        function setRelatedMissForField(field) {
-            if (!field) return;
-            const id = field.id;
-            const advOn = document.getElementById('manual-advantage-popup')?.checked;
-            if (field.dataset.fieldType === 'damage') {
-                setManualMiss(id);
-                if (id === 'manual-ranged-d8') {
-                    setManualMiss('manual-ranged-d20');
-                    setManualMiss('manual-ranged-d20-adv-2');
-                    ['manual-ranged-oath-3d6-1', 'manual-ranged-oath-3d6-2', 'manual-ranged-oath-3d6-3'].forEach(setManualMiss);
-                }
-                if (id.startsWith('manual-melee-d')) {
-                    const idx = id.slice(-1);
-                    setManualMiss(`manual-melee-h${idx}`);
-                    setManualMiss(`manual-melee-h${idx}-adv`);
-                }
-            } else if (field.dataset.fieldType === 'hit') {
-                setManualMiss(id);
-                const meleeIndex = id.match(/^manual-melee-h(\d+)/)?.[1];
-                if (meleeIndex) {
-                    if (!advOn || (isManualMiss(`manual-melee-h${meleeIndex}`) && isManualMiss(`manual-melee-h${meleeIndex}-adv`))) {
-                        setManualMiss(`manual-melee-d${meleeIndex}`);
-                    }
-                }
-                if (id === 'manual-ranged-d20' || id === 'manual-ranged-d20-adv-2') {
-                    if (!advOn || (isManualMiss('manual-ranged-d20') && isManualMiss('manual-ranged-d20-adv-2'))) {
-                        setManualMiss('manual-ranged-d8');
-                        ['manual-ranged-oath-3d6-1', 'manual-ranged-oath-3d6-2', 'manual-ranged-oath-3d6-3'].forEach(setManualMiss);
-                    }
-                }
-            }
-        }
-
-        function getManualDiceList(prefix, count, sides) {
-            const values = [];
-            for (let i = 1; i <= count; i++) {
-                const value = parseInt(manualValues[`${prefix}-${i}`], 10);
-                if (!Number.isFinite(value) || value < 1 || value > sides) {
-                    return null;
-                }
-                values.push(value);
-            }
-            return values;
-        }
-
-        function getManualDiceSum(prefix, count, sides) {
-            const list = getManualDiceList(prefix, count, sides);
-            return list ? list.reduce((sum, n) => sum + n, 0) : null;
-        }
-
-        function openManualPopup(type) {
-            document.getElementById('manual-popup-overlay').classList.remove('hidden');
-            // bring popup overlay to front when opened
-            bringElementToFront(document.getElementById('manual-popup-overlay'));
-            if (type) {
-                setManualScenario(type);
-            } else {
-                setManualScenario(manualScenario);
-            }
-            const visibleField = document.querySelector('.manual-field:not([style*="display: none"])');
-            if (visibleField) {
-                selectManualField(visibleField.id);
-            }
-            updateManualMissButton();
-        }
-
-        function closeManualPopup(event) {
-            if (event && event.target !== document.getElementById('manual-popup-overlay')) {
-                return;
-            }
-            document.getElementById('manual-popup-overlay').classList.add('hidden');
-            if (currentManualField) {
-                currentManualField.classList.remove('manual-selected');
-                currentManualField = null;
-            }
-        }
-
-        // z-index bring-to-front helpers for popups/panels
-        let __popupTopZ = 100;
-        function bringElementToFront(el) {
-            if (!el) return;
-            __popupTopZ += 1;
-            try { el.style.zIndex = __popupTopZ; } catch (e) {}
-        }
-
-        // Global listeners to bring clicked/touched popup-like elements to front
-        function _bringPopupOnInteraction() {
-            function handler(e) {
-                let node = e.target;
-                while (node && node !== document) {
-                    if (node.classList && (node.classList.contains('manual-popup') || node.classList.contains('floating-log-panel') || node.classList.contains('log-panel'))) {
-                        const overlay = node.closest('.manual-popup-overlay') || node;
-                        bringElementToFront(overlay);
-                        break;
-                    }
-                    node = node.parentNode;
-                }
-            }
-            document.addEventListener('mousedown', handler, {passive: true});
-            document.addEventListener('touchstart', handler, {passive: true});
-        }
-        _bringPopupOnInteraction();
-
-        function setManualScenario(type) {
-            if (type === 'advantage') {
-                manualScenario = 'ranged';
-                const advPopup = document.getElementById('manual-advantage-popup');
-                if (advPopup) advPopup.checked = true;
-                const critPopup = document.getElementById('manual-crit-popup');
-                if (critPopup) critPopup.checked = false;
-            } else if (type === 'crit') {
-                manualScenario = 'ranged';
-                const critPopup = document.getElementById('manual-crit-popup');
-                if (critPopup) critPopup.checked = true;
-                const advPopup = document.getElementById('manual-advantage-popup');
-                if (advPopup) advPopup.checked = false;
-            } else {
-                manualScenario = type;
-            }
-            document.getElementById('manual-scenario-label').innerText = {
-                secondwind: '回氣',
-                ranged: '遠程',
-                melee: '近戰'
-            }[manualScenario] || '遠程';
-            updateManualScenarioButtons();
-            document.getElementById('manual-field-help').innerText = '請先點擊一個骰子欄位，然後在下方直接選擇數值。暴擊欄位會在 19-20 命中時自動顯示。';
-            updateManualFieldsVisibility();
-        }
-
-        function updateManualScenarioButtons() {
-            ['secondwind', 'ranged', 'melee'].forEach(mode => {
-                const btn = document.getElementById(`manual-scenario-${mode}`);
-                if (btn) {
-                    btn.classList.toggle('active', manualScenario === mode);
-                }
-            });
-        }
-
-        function isManualDamageCritLocked(field) {
-            if (!field || field.dataset.fieldType !== 'damage' || field.dataset.requireCrit === 'true') return false;
-            const advOn = document.getElementById('manual-advantage-popup')?.checked;
-            const critOn = document.getElementById('manual-crit-popup')?.checked;
-            if (manualScenario === 'ranged') {
-                if (isRangedOathBowField(field)) {
-                    return Boolean(critOn || isManualRangedCrit(advOn));
-                }
-                return Boolean(critOn || isManualRangedCrit(advOn));
-            }
-            if (manualScenario === 'melee') {
-                const group = field.dataset.attackGroup;
-                if (!group) return false;
-                const critTargets = {
-                    ranged: false,
-                    1: isManualMeleeCrit(1, advOn),
-                    2: isManualMeleeCrit(2, advOn),
-                    3: isManualMeleeCrit(3, advOn)
-                };
-                return Boolean(critOn || critTargets[group]);
-            }
-            return false;
-        }
-
-        function updateManualFieldsVisibility() {
-            const advOn = document.getElementById('manual-advantage-popup')?.checked;
-            const critOn = document.getElementById('manual-crit-popup')?.checked;
-            const critTargets = {
-                ranged: false,
-                1: false,
-                2: false,
-                3: false
-            };
-            if (manualScenario === 'melee') {
-                critTargets[1] = isManualMeleeCrit(1, advOn);
-                critTargets[2] = isManualMeleeCrit(2, advOn);
-                critTargets[3] = isManualMeleeCrit(3, advOn);
-            }
-            if (manualScenario === 'ranged') {
-                critTargets.ranged = isManualRangedCrit(advOn);
-            }
-            const hitCritActive = Array.from(document.querySelectorAll('.manual-field[data-field-type="hit"]')).filter(field => {
-                const scenarios = (field.dataset.scenarios || '').split(' ');
-                return scenarios.includes(manualScenario);
-            }).some(field => {
-                const value = getManualHitValue(field.id);
-                return typeof value === 'number' && value >= 19;
-            });
-            const fields = document.querySelectorAll('.manual-field');
-            fields.forEach(field => {
-                const scenarios = (field.dataset.scenarios || '').split(' ');
-                const requireAdv = field.dataset.requireAdv === 'true';
-                const requireCrit = field.dataset.requireCrit === 'true';
-                const critTarget = field.dataset.critTarget;
-                const visible = scenarios.includes(manualScenario)
-                    && (!requireAdv || advOn)
-                    && (!requireCrit || critOn || (critTarget ? critTargets[critTarget] : hitCritActive));
-                field.style.display = visible ? 'flex' : 'none';
-                const critLocked = field.dataset.fieldType === 'damage' && !requireCrit && isManualDamageCritLocked(field);
-                field.disabled = critLocked;
-                field.classList.toggle('manual-field-disabled', critLocked);
-            });
-            if (currentManualField) {
-                const fieldScenarios = (currentManualField.dataset.scenarios || '').split(' ');
-                const requireAdv = currentManualField.dataset.requireAdv === 'true';
-                const requireCrit = currentManualField.dataset.requireCrit === 'true';
-                const critTarget = currentManualField.dataset.critTarget;
-                const stillVisible = fieldScenarios.includes(manualScenario)
-                    && (!requireAdv || document.getElementById('manual-advantage-popup')?.checked)
-                    && (!requireCrit || document.getElementById('manual-crit-popup')?.checked || (critTarget ? critTargets[critTarget] : hitCritActive));
-                if (!stillVisible || currentManualField.disabled) {
-                    currentManualField.classList.remove('manual-selected');
-                    currentManualField = null;
-                    document.getElementById('manual-selected-field').innerText = '無';
-                    document.getElementById('manual-selected-value').innerText = '未選';
-                }
-            }
-            updateDiceGridVisibility();
-            updateManualMissButton();
-            evaluateCritsUI();
-        }
-
-        function evaluateCritsUI() {
-            const advOn = document.getElementById('manual-advantage-popup')?.checked;
-            if (manualScenario === 'melee') {
-                // For melee scenario, if any final hit (considering advantage) >= 19, mark its damage field as crit-double
-                for (let i = 1; i <= 3; i++) {
-                    const hId = `manual-melee-h${i}`;
-                    const hAdvId = `manual-melee-h${i}-adv`;
-                    const dId = `manual-melee-d${i}`;
-                    const h = getManualHitValue(hId);
-                    const hAdv = getManualHitValue(hAdvId);
-                    let final = null;
-                    if (advOn) {
-                        if (h != null && hAdv != null) final = Math.max(h, hAdv);
-                        else if (h != null) final = h;
-                        else if (hAdv != null) final = hAdv;
-                    } else {
-                        final = h != null ? h : null;
-                    }
-                    const dmgField = document.getElementById(dId);
-                    const dmgLabel = document.getElementById(`label-${dId}`);
-                    if (!dmgField || !dmgLabel) continue;
-                    if (final != null && final >= 19) {
-                        dmgField.dataset.critDouble = 'true';
-                        const sides = parseInt(dmgField.dataset.dice, 10) || 0;
-                        dmgLabel.innerText = `2d${sides} + 5`;
-                    } else {
-                        if (dmgField.dataset.critDouble) delete dmgField.dataset.critDouble;
-                        if (isManualMiss(dId)) {
-                            dmgLabel.innerText = '0(未命中)';
-                        } else {
-                            const v = getManualNumber(dId, 1, parseInt(dmgField.dataset.dice, 10));
-                            dmgLabel.innerText = v != null ? v : '未選';
-                        }
-                    }
-                }
-            }
-            if (manualScenario === 'ranged') {
-                const critActive = isManualRangedCrit(advOn);
-                const rangedCritFields = Array.from(document.querySelectorAll('.manual-field[data-scenarios~="ranged"][data-field-type="damage"]'));
-                rangedCritFields.forEach(field => {
-                    const label = document.getElementById(`label-${field.id}`);
-                    if (!label) return;
-                    const formulaText = getRangedCritFormulaText(field, advOn);
-                    if (formulaText) {
-                        label.innerText = formulaText;
-                        return;
-                    }
-                    if (field.dataset.requireCrit === 'true') {
-                        const value = getManualNumber(field.id, 1, parseInt(field.dataset.dice, 10));
-                        if (value != null) {
-                            label.innerText = value;
-                        } else if (!critActive || !field.style.display || field.style.display === 'none') {
-                            label.innerText = '未選';
-                        }
-                    }
-                });
-            }
-            if (currentManualField && currentManualField.dataset.fieldType === 'damage') {
-                if (currentManualField.dataset.critDouble === 'true') {
-                    document.getElementById('manual-selected-value').innerText = '2d' + currentManualField.dataset.dice + ' + 5';
-                } else if (isRangedCritFormulaField(currentManualField, advOn)) {
-                    document.getElementById('manual-selected-value').innerText = getRangedCritFormulaText(currentManualField, advOn);
-                } else if (isManualMiss(currentManualField.id)) {
-                    document.getElementById('manual-selected-value').innerText = '0(未命中)';
-                }
-            }
-            updateDiceGridVisibility();
-        }
-
-        function formatManualSelectedValue(field, value) {
-            if (!field) return '未選';
-            if (isManualMiss(field.id)) {
-                if (field.dataset.fieldType === 'damage') {
-                    return '0(未命中)';
-                }
-                const hitValue = getManualNumber(field.id, 1, 20);
-                if (hitValue != null) {
-                    return `d20(${hitValue}) + 9 = ${hitValue + 9} (未命中)`;
-                }
-                return 'X(未命中)';
-            }
-            if (field.dataset.fieldType === 'hit') {
-                if (value == null) return '未選';
-                const total = value + 9;
-                return `d20(${value}) + 9 = ${total}`;
-            }
-            if (field.dataset.fieldType === 'damage') {
-                if (field.dataset.critDouble === 'true') return `2d${field.dataset.dice} + 5`;
-                const rangedFormula = getRangedCritFormulaText(field, document.getElementById('manual-advantage-popup')?.checked);
-                if (rangedFormula) return rangedFormula;
-                if (value == null) return '未選';
-                const sides = parseInt(field.dataset.dice, 10) || 0;
-                const total = value + 5;
-                return `d${sides}(${value}) + 5 = ${total}`;
-            }
-            return value;
-        }
-
-        function selectManualField(id) {
-            if (currentManualField) {
-                currentManualField.classList.remove('manual-selected');
-            }
-            currentManualField = document.getElementById(id);
-            if (currentManualField && currentManualField.disabled) {
-                currentManualField = null;
-            }
-            if (currentManualField) {
-                currentManualField.classList.add('manual-selected');
-                document.getElementById('manual-field-help').innerText = `目前選擇：${currentManualField.querySelector('span').innerText}`;
-                document.getElementById('manual-selected-field').innerText = currentManualField.querySelector('span').innerText;
-                const savedValue = getManualNumber(currentManualField.id, 1, parseInt(currentManualField.dataset.dice, 10));
-                document.getElementById('manual-selected-value').innerText = formatManualSelectedValue(currentManualField, savedValue);
-            }
-            updateDiceGridVisibility();
-            updateManualMissButton();
-        }
-
-        function setManualDiceValue(value, button) {
-            if (!currentManualField || currentManualField.disabled) return;
-            clearManualMiss(currentManualField.id);
-            clearRelatedMissForField(currentManualField);
-            manualValues[currentManualField.id] = value;
-            const label = document.getElementById(`label-${currentManualField.id}`);
-            if (label) {
-                label.innerText = value;
-            }
-            document.getElementById('manual-selected-value').innerText = formatManualSelectedValue(currentManualField, value);
-            if (button) {
-                const grid = button.closest('.dice-picker-grid');
-                if (grid) {
-                    grid.querySelectorAll('.dice-button').forEach(btn => btn.classList.remove('dice-selected'));
-                }
-                button.classList.add('dice-selected');
-            }
-            updateManualMissButton();
-            if (currentManualField.dataset.fieldType === 'hit') {
-                updateManualFieldsVisibility();
-            }
-        }
-
-        function updateDiceGridVisibility() {
-            const grids = ['dice-grid-d20', 'dice-grid-d10', 'dice-grid-d8', 'dice-grid-d6', 'dice-grid-d4'];
-            grids.forEach(gridId => {
-                const grid = document.getElementById(gridId);
-                if (!grid) return;
-                grid.style.display = 'none';
-                grid.querySelectorAll('.dice-button').forEach(btn => btn.classList.remove('dice-selected'));
-            });
-            if (!currentManualField || currentManualField.disabled) return;
-            // If damage field is crit-max, still show grid but display crit format
-            if (currentManualField.dataset.fieldType === 'damage' && (currentManualField.dataset.critDouble === 'true' || isRangedCritFormulaField(currentManualField, document.getElementById('manual-advantage-popup')?.checked))) {
-                document.getElementById('manual-selected-value').innerText = '2d' + currentManualField.dataset.dice + ' + 5';
-            }
-            const diceType = currentManualField.dataset.dice;
-            const grid = document.getElementById(`dice-grid-d${diceType}`);
-            if (grid) {
-                grid.style.display = 'grid';
-                const savedValue = getManualNumber(currentManualField.id, 1, parseInt(currentManualField.dataset.dice, 10));
-                if (savedValue != null) {
-                    const buttons = grid.querySelectorAll('.dice-button');
-                    buttons.forEach(btn => {
-                        if (btn.innerText === String(savedValue)) {
-                            btn.classList.add('dice-selected');
-                        }
-                    });
-                }
-            }
-        }
-
-        function updateManualMissButton() {
-            const action = document.getElementById('manual-miss-action');
-            const note = document.getElementById('manual-miss-note');
-            if (!action || !note) return;
-            const currentIsHitOrDamage = currentManualField?.dataset.fieldType === 'hit' || currentManualField?.dataset.fieldType === 'damage';
-            const anyHitValue = Array.from(document.querySelectorAll('.manual-field[data-field-type="hit"]'))
-                .some(field => getManualNumber(field.id, 1, parseInt(field.dataset.dice, 10)) !== null || isManualMiss(field.id));
-            if (currentIsHitOrDamage || anyHitValue) {
-                action.style.display = 'flex';
-                note.innerText = currentIsHitOrDamage ? '當前選擇命中或傷害欄，可直接記錄未命中。' : '已有命中骰輸入，可直接記錄未命中。';
-            } else {
-                action.style.display = 'none';
-            }
-        }
-
-        function clearManualPopup() {
-            Object.keys(manualValues).forEach(key => delete manualValues[key]);
-            Object.keys(manualMissFlags).forEach(key => delete manualMissFlags[key]);
-            const labels = document.querySelectorAll('[id^="label-manual-"]');
-            labels.forEach(el => el.innerText = '未選');
-            if (currentManualField) {
-                currentManualField.classList.remove('manual-selected');
-                currentManualField = null;
-            }
-            document.getElementById('manual-field-help').innerText = '請先點擊一個骰子欄位，然後在下方直接選擇數值。';
-            document.getElementById('manual-selected-field').innerText = '無';
-            document.getElementById('manual-selected-value').innerText = '未選';
-            updateManualFieldsVisibility();
-            updateManualMissButton();
-        }
-
-        function calculateManualScenario() {
-            let output = '';
-            const scenario = manualScenario;
-            const advOn = document.getElementById('manual-advantage-popup')?.checked;
-
-            if (scenario === 'secondwind') {
-                const d10 = getManualNumber('manual-secondwind-d10', 1, 10);
-                if (!d10) {
-                    alert('請選擇回氣 d10。');
-                    return;
-                }
-                const total = d10 + 9;
-                output = `<b>🩸 【回氣】手動計算</b><br>` +
-                         `• 公式：1d10 + 9<br>` +
-                         `• 恢復骰: d10(${d10}) + 9 = <b>${total}</b><br>`;
-            } else if (scenario === 'ranged') {
-                const d20 = getManualHitValue('manual-ranged-d20');
-                const d20_2 = advOn ? getManualHitValue('manual-ranged-d20-adv-2') : null;
-                const d8Value = getManualNumber('manual-ranged-d8', 1, 8);
-                const d8 = getManualDamageValue('manual-ranged-d8', 8);
-                const isDamageMiss = isManualMiss('manual-ranged-d8');
-
-                if (advOn) {
-                    if (d20 === null && d20_2 === null && !isDamageMiss) {
-                        alert('請選擇遠程 d20 和遠程傷害 d8。');
-                        return;
-                    }
-                    const final = resolveManualHit(d20, d20_2);
-                    if (final === 'miss' || isDamageMiss) {
-                        output = `<b>❌ 手動遠程未命中</b><br>• 傷害：<b>0</b><br>`;
-                        log(output);
-                        return;
-                    }
-                    const oathDice = getManualDiceList('manual-ranged-oath-3d6', 3, 6);
-                    const usesOathBow = Array.isArray(oathDice);
-                    const totalOath = usesOathBow ? oathDice.reduce((sum, n) => sum + n, 0) : 0;
-                    const isCrit = final >= 19;
-                    output = `<b>🎯 優勢長弓手動計算</b><br>` +
-                             `• 命中 (取高): [${d20 === 'miss' ? 'X' : d20}, ${d20_2 === 'miss' ? 'X' : d20_2}] = <b>${final}</b> + 9 = <b>${final + 9}</b><br>`;
-                    if (isCrit) {
-                        const critD8 = getManualDiceList('manual-ranged-crit-d8', 2, 8);
-                        if (!critD8) {
-                            alert('請輸入暴擊傷害骰 (2 顆 d8)。');
-                            return;
-                        }
-                        const totalCritD8 = critD8.reduce((sum, n) => sum + n, 0);
-                        if (usesOathBow) {
-                            const critDice = getManualDiceList('manual-ranged-crit-6d6', 6, 6);
-                            if (!critDice) {
-                                alert('請輸入所有誓約暴擊傷害骰 (6 顆 d6)。');
-                                return;
-                            }
-                            const totalCritDice = critDice.reduce((sum, n) => sum + n, 0);
-                            const totalCritDamage = totalCritD8 + totalCritDice + 5;
-                            output += `• 暴擊：所有傷害骰翻倍。<br>` +
-                                      `• 傷害：2d8(${critD8.join(',')}) + 6d6(${critDice.join(',')}) + 5 = <b>${totalCritDamage}</b><br>`;
-                        } else {
-                            output += `• 暴擊：所有傷害骰翻倍。<br>` +
-                                      `• 傷害：2d8(${critD8.join(',')}) + 5 = <b>${totalCritD8 + 5}</b><br>`;
-                        }
-                    } else {
-                        if (d8Value == null) {
-                            alert('請選擇遠程 d20 和遠程傷害 d8。');
-                            return;
-                        }
-                        if (usesOathBow) {
-                            output += `• 公式：1d8 + 3d6 + 5<br>` +
-                                      `• 傷害：d8(${d8}) + 3d6(${oathDice.join(',')}) + 5 = <b>${d8 + totalOath + 5}</b><br>`;
-                        } else {
-                            output += `• 公式：1d8 + 5<br>` +
-                                      `• 傷害：d8(${d8}) + 5 = <b>${d8 + 5}</b><br>`;
-                        }
-                    }
-                } else {
-                    if (d20 === null && !isDamageMiss) {
-                        alert('請選擇遠程 d20 和遠程傷害 d8。');
-                        return;
-                    }
-                    if (d20 === 'miss' || isDamageMiss) {
-                        output = `<b>❌ 手動遠程未命中</b><br>• 傷害：<b>0</b><br>`;
-                        log(output);
-                        return;
-                    }
-                    const hit = d20 + 9;
-                    const isCrit = d20 >= 19;
-                    output = `<b>🏹 普通長弓手動計算</b><br>` +
-                             `• 公式：1d8 + 5<br>` +
-                             `• 命中：d20(${d20}) + 9 = <b>${hit}</b><br>`;
-                    if (isCrit) {
-                        const critD8 = getManualDiceList('manual-ranged-crit-d8', 2, 8);
-                        if (!critD8) {
-                            alert('請輸入暴擊傷害骰 (2 顆 d8)。');
-                            return;
-                        }
-                        const totalCritD8 = critD8.reduce((sum, n) => sum + n, 0);
-                        output += `• 暴擊：所有傷害骰翻倍。<br>` +
-                                  `• 傷害：2d8(${critD8.join(',')}) + 5 = <b>${totalCritD8 + 5}</b><br>`;
-                    } else {
-                        if (d8Value == null) {
-                            alert('請選擇遠程 d20 和遠程傷害 d8。');
-                            return;
-                        }
-                        output += `• 傷害：d8(${d8}) + 5 = <b>${d8 + 5}</b><br>`;
-                    }
-                }
-            } else if (scenario === 'melee') {
-                const h1 = getManualHitValue('manual-melee-h1');
-                const h1Adv = getManualHitValue('manual-melee-h1-adv');
-                const h2 = getManualHitValue('manual-melee-h2');
-                const h2Adv = getManualHitValue('manual-melee-h2-adv');
-                const h3 = getManualHitValue('manual-melee-h3');
-                const h3Adv = getManualHitValue('manual-melee-h3-adv');
-                const d1Value = getManualNumber('manual-melee-d1', 1, 6);
-                const d2Value = getManualNumber('manual-melee-d2', 1, 6);
-                const d3Value = getManualNumber('manual-melee-d3', 1, 4);
-                const critD1Values = getManualDiceList('manual-melee-crit-d1', 2, 6);
-                const critD2Values = getManualDiceList('manual-melee-crit-d2', 2, 6);
-                const critD3Values = getManualDiceList('manual-melee-crit-d3', 2, 4);
-                const d1 = getManualDamageValue('manual-melee-d1', 6);
-                const d2 = getManualDamageValue('manual-melee-d2', 6);
-                const d3 = getManualDamageValue('manual-melee-d3', 4);
-                const anyHitInput = [h1, h1Adv, h2, h2Adv, h3, h3Adv].some(value => value === 'miss' || Number.isFinite(value));
-                if (!anyHitInput) {
-                    alert('請選擇三個命中 d20 或標記部分攻擊未命中。');
-                    return;
-                }
-                const final1 = advOn ? resolveManualHit(h1, h1Adv) : h1;
-                const final2 = advOn ? resolveManualHit(h2, h2Adv) : h2;
-                const final3 = advOn ? resolveManualHit(h3, h3Adv) : h3;
-                const isCrit1 = typeof final1 === 'number' && final1 >= 19;
-                const isCrit2 = typeof final2 === 'number' && final2 >= 19;
-                const isCrit3 = typeof final3 === 'number' && final3 >= 19;
-                if (final1 !== 'miss' && !isCrit1 && d1Value == null) {
-                    alert('請選擇主手①的傷害骰，或標記該攻擊為未命中。');
-                    return;
-                }
-                if (final2 !== 'miss' && !isCrit2 && d2Value == null) {
-                    alert('請選擇主手②的傷害骰，或標記該攻擊為未命中。');
-                    return;
-                }
-                if (final3 !== 'miss' && !isCrit3 && d3Value == null) {
-                    alert('請選擇副手的傷害骰，或標記該攻擊為未命中。');
-                    return;
-                }
-                const dmg1 = final1 === 'miss' ? 0 : (isCrit1 ? (critD1Values ? critD1Values.reduce((sum, n) => sum + n, 0) + 5 : 17) : d1 + 5);
-                const dmg2 = final2 === 'miss' ? 0 : (isCrit2 ? (critD2Values ? critD2Values.reduce((sum, n) => sum + n, 0) + 5 : 17) : d2 + 5);
-                const dmg3 = final3 === 'miss' ? 0 : (isCrit3 ? (critD3Values ? critD3Values.reduce((sum, n) => sum + n, 0) + 5 : 13) : d3 + 5);
-                output = `<b>⚔️ 近戰三刀手動計算</b><br>` +
-                         `• 公式：1d6 + 1d6 + 1d4 + 15<br>` +
-                         `• 主手①：d20(${h1 === 'miss' ? 'X' : h1}${advOn ? `, ${h1Adv === 'miss' ? 'X' : h1Adv}` : ''}) 取高 = <b>${final1 === 'miss' ? '未命中' : final1}</b>${final1 === 'miss' ? '' : ` + 9 = <b>${final1 + 9}</b>`}${isCrit1 && final1 !== 'miss' ? ' <span class="crit-alert">[暴擊]</span>' : ''}<br>` +
-                         `• 主手②：d20(${h2 === 'miss' ? 'X' : h2}${advOn ? `, ${h2Adv === 'miss' ? 'X' : h2Adv}` : ''}) 取高 = <b>${final2 === 'miss' ? '未命中' : final2}</b>${final2 === 'miss' ? '' : ` + 9 = <b>${final2 + 9}</b>`}${isCrit2 && final2 !== 'miss' ? ' <span class="crit-alert">[暴擊]</span>' : ''}<br>` +
-                         `• 副手  ：d20(${h3 === 'miss' ? 'X' : h3}${advOn ? `, ${h3Adv === 'miss' ? 'X' : h3Adv}` : ''}) 取高 = <b>${final3 === 'miss' ? '未命中' : final3}</b>${final3 === 'miss' ? '' : ` + 9 = <b>${final3 + 9}</b>`}${isCrit3 && final3 !== 'miss' ? ' <span class="crit-alert">[暴擊]</span>' : ''}<br>` +
-                         `• 傷害：主手① ${final1 === 'miss' ? '0(未命中)' : isCrit1 ? '2d6 + 5' : `1d6(${d1}) + 5`} = <b>${dmg1}</b><br>` +
-                         `• 傷害：主手② ${final2 === 'miss' ? '0(未命中)' : isCrit2 ? '2d6 + 5' : `1d6(${d2}) + 5`} = <b>${dmg2}</b><br>` +
-                         `• 傷害：副手 ${final3 === 'miss' ? '0(未命中)' : isCrit3 ? '2d4 + 5' : `1d4(${d3}) + 5`} = <b>${dmg3}</b><br>` +
-                         `• 全部總傷：<b>${dmg1 + dmg2 + dmg3}</b><br>`;
-            } else {
-                alert('請先選擇場景。');
-                return;
-            }
-            log(output);
-        }
-
-        function recordManualMiss() {
-            if (!currentManualField) {
-                alert('請先選擇一個命中骰或傷害欄位，再記錄未命中。');
-                return;
-            }
-            setRelatedMissForField(currentManualField);
-            if (currentManualField.dataset.fieldType === 'damage') {
-                document.getElementById('manual-selected-value').innerText = formatManualSelectedValue(currentManualField, null);
-            } else {
-                document.getElementById('manual-selected-value').innerText = formatManualSelectedValue(currentManualField, null);
-            }
-            const fieldName = currentManualField.querySelector('span')?.innerText || currentManualField.id;
-            appendLog(`<b>❌ 手動未命中</b><br>• 已標記 ${fieldName} 為未命中<br>• 傷害：<b>0</b>`);
-        }
-
-        function initializeManualButtons() {
-            const createGrid = (containerId, start, end) => {
-                const container = document.getElementById(containerId);
-                if (!container) return;
-                container.innerHTML = '';
-                for (let i = start; i <= end; i++) {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'dice-button';
-                    btn.innerText = i;
-                    btn.addEventListener('click', () => setManualDiceValue(i, btn));
-                    container.appendChild(btn);
-                }
-            };
-            createGrid('dice-grid-d20', 1, 20);
-            createGrid('dice-grid-d10', 1, 10);
-            createGrid('dice-grid-d8', 1, 8);
-            createGrid('dice-grid-d6', 1, 6);
-            createGrid('dice-grid-d4', 1, 4);
-        }
-
-        window.addEventListener('DOMContentLoaded', initializeManualButtons);
-
-        function computeActualAttack(mode) {
-            const inputOne = parseActualNumber('actual-d20', NaN);
-            const inputTwo = parseActualNumber('actual-adv-d20-2', NaN);
-            if (mode === 'single') {
-                if (!Number.isFinite(inputOne) || inputOne < 1 || inputOne > 20) {
-                    alert('請輸入有效的實際 d20 點數（1-20）。');
-                    return;
-                }
-                const isCrit = inputOne >= 19;
-                const total = inputOne + 9;
-                appendLog(`<b>🎲 實際單發攻擊</b><br>• d20: ${inputOne} + 9 = <b>${total}</b>` + (isCrit ? ` <span class="crit-alert">[ 暴擊！]</span>` : '') + `<br>• 結果: <b>${inputOne >= 10 ? '可能命中' : '可能未命中'}</b>`);
-            } else if (mode === 'advantage') {
-                if (!Number.isFinite(inputOne) || !Number.isFinite(inputTwo) || inputOne < 1 || inputOne > 20 || inputTwo < 1 || inputTwo > 20) {
-                    alert('請輸入兩個有效的實際優勢 d20 點數（1-20）。');
-                    return;
-                }
-                const best = Math.max(inputOne, inputTwo);
-                const isCrit = best >= 19;
-                const total = best + 9;
-                appendLog(`<b>🎲 實際優勢攻擊</b><br>• d20: [${inputOne}, ${inputTwo}] 取高 = <b>${best}</b> + 9 = <b>${total}</b>` + (isCrit ? ` <span class="crit-alert">[ 暴擊！]</span>` : '') + `<br>• 結果: <b>${best >= 10 ? '可能命中' : '可能未命中'}</b>`);
-            }
-        }
-
-        function recordActualMiss() {
-            const inputOne = parseActualNumber('actual-d20', NaN);
-            const inputTwo = parseActualNumber('actual-adv-d20-2', NaN);
-            if (Number.isFinite(inputOne) && inputOne >= 1 && inputOne <= 20 && Number.isFinite(inputTwo) && inputTwo >= 1 && inputTwo <= 20) {
-                appendLog(`<b>❌ 實際未命中</b><br>• d20 單發: ${inputOne}<br>• 優勢: [${inputOne}, ${inputTwo}]`);
-                return;
-            }
-            if (Number.isFinite(inputOne) && inputOne >= 1 && inputOne <= 20) {
-                appendLog(`<b>❌ 實際未命中</b><br>• d20: ${inputOne}`);
-                return;
-            }
-            alert('請先輸入實際 d20 點數，再點擊「記錄未命中」。');
-        }
-
-        function computeActualDamage() {
-            const values = document.getElementById('actual-damage-values').value.split(',').map(v => parseInt(v.trim(), 10)).filter(n => Number.isFinite(n) && n > 0);
-            const bonus = parseActualNumber('actual-damage-bonus', 0);
-            if (values.length === 0) {
-                alert('請輸入至少一個實際傷害骰值。');
-                return;
-            }
-            const total = values.reduce((sum, n) => sum + n, 0) + bonus;
-            appendLog(`<b>💥 實際傷害計算</b><br>• 骰值: [${values.join(', ')}] + ${bonus} = <b>${total}</b> 結算傷害`);
-        }
-
-        function rollSecondWind() {
-            let die = getManualNumber('manual-secondwind-d10', 1, 10) ?? roll(10);
-            let total = die + 9;
-            log(`<b>🩸 【回氣】補血結算</b><br>` +
-                `• 恢復骰 (1d10): <b>${die}</b> | 固定加成: +9<br>` +
-                `👉 <b>總計恢復: <span style="color:var(--success)">${total}</span> 點生命值！</b> (附帶免借機位移 15 呎)`);
-        }
-
-        function rollRanged(type) {
-            let d20_1 = getManualNumber('manual-ranged-d20', 1, 20) ?? roll(20);
-            let d20_2 = getManualNumber('manual-ranged-d20-adv-2', 1, 20) ?? roll(20);
-            const manualD8 = getManualNumber('manual-ranged-d8', 1, 8);
-            const advantageChecked = document.getElementById('manual-advantage')?.checked;
-            const isAdvantage = type === 'oath' || (type === undefined && advantageChecked);
-            
-            if (!isAdvantage && type !== 'crit') {
-                let isCrit = d20_1 >= 19;
-                let hitResult = d20_1 + 9;
-                let dmgDie = manualD8 ?? roll(8);
-                let totalDmg = dmgDie + 5;
-                
-                let output = `<b>🏹 長弓普通射擊 (單發)</b><br>` +
-                             `• 命中檢定: d20(${d20_1}) + 9 = <b>${hitResult}</b>` + (isCrit ? ` <span class="crit-alert">[ 暴擊！]</span>` : ``) + `<br>`;
-                if (isCrit) {
-                    let dmgDie2 = roll(8);
-                    totalDmg = dmgDie + dmgDie2 + 5;
-                    output += `• 傷害 (暴擊骰翻倍): 2d8(${dmgDie}+${dmgDie2}) + 5 👉 <b>物理傷害: <span style="color:var(--primary)">${totalDmg}</span> 點</b>`;
-                } else {
-                    output += `• 傷害: d8(${dmgDie}) + 5 👉 <b>物理傷害: <b>${totalDmg}</b> 點</b>`;
-                }
-                log(output);
-            } 
-            else if (isAdvantage && type !== 'crit') {
-                let finalD20 = Math.max(d20_1, d20_2);
-                let isCrit = finalD20 >= 19;
-                let hitResult = finalD20 + 9;
-                
-                let output = `<b>🎯 誓約弓優勢射擊 (單發)</b><br>` +
-                             `• 命中 (取高): [${d20_1}, ${d20_2}] 👉 <b>${finalD20}</b> + 9 = <b>${hitResult}</b>` + (isCrit ? ` <span class="crit-alert">[ 暴擊！]</span>` : ``) + `<br>`;
-                
-                let d8 = manualD8 ?? roll(8);
-                const oathDice = getManualDiceList('manual-ranged-oath-3d6', 3, 6) || [roll(6), roll(6), roll(6)];
-                let totalOath = oathDice.reduce((a, b) => a + b, 0);
-                
-                if (isCrit) {
-                    let d8_2 = roll(8);
-                    const critDice = getManualDiceList('manual-ranged-crit-6d6', 6, 6) || [roll(6), roll(6), roll(6), roll(6), roll(6), roll(6)];
-                    let totalOathCrit = totalOath + critDice.reduce((a, b) => a + b, 0);
-                    let totalDmg = d8 + d8_2 + totalOathCrit + 5;
-                    output += `• 傷害 (暴擊骰翻倍): 2d8(${d8}+${d8_2}) + 6d6 👉 <b class="crit-alert">暴擊總傷: ${totalDmg} 點穿刺！</b>`;
-                } else {
-                    let totalDmg = d8 + totalOath + 5;
-                    output += `• 傷害: d8(${d8}) + 誓約3d6(${totalOath}) + 5 👉 <b>總傷害: <span style="color:var(--warning)">${totalDmg}</span> 點穿刺！</b>`;
-                }
-                log(output);
-            }
-            else if (type === 'crit') {
-                const maxD8 = 8;
-                const maxD6 = 6;
-                const totalDmg = maxD8 * 2 + maxD6 * 6 + 5;
-
-                log(`<b>🔥 誓約弓【絕對暴擊】傷害模擬</b><br>` +
-                    `• 長弓基礎骰 (2d8): ${maxD8 * 2} | 誓約追加骰 (6d6): ${maxD6 * 6} | 加成: +5<br>` +
-                    `👉 <b class="crit-alert" style="font-size:1.1rem;">絕對暴擊總傷害: ${totalDmg} 點物理穿刺！</b>`);
-            }
-        }
-
-        function rollMeleeCombo() {
-            let h1 = getManualNumber('manual-melee-h1', 1, 20) ?? roll(20);
-            let h2 = getManualNumber('manual-melee-h2', 1, 20) ?? roll(20);
-            let h3 = getManualNumber('manual-melee-h3', 1, 20) ?? roll(20);
-            const manualD1 = getManualNumber('manual-melee-d1', 1, 999);
-            const manualD2 = getManualNumber('manual-melee-d2', 1, 999);
-            const manualD3 = getManualNumber('manual-melee-d3', 1, 999);
-            let d1 = manualD1 != null ? manualD1 + 5 : roll(6) + 5;
-            let d2 = manualD2 != null ? manualD2 + 5 : roll(6) + 5;
-            let d3 = manualD3 != null ? manualD3 + 5 : roll(4) + 5;
-            log(`<b>⚔️ 近戰雙刀流（三刀連砍結果）</b><br>` +
-                `1️⃣ 主手短劍①: 命中 <b>${h1+9}</b> | 傷害: <b>${d1}</b><br>` +
-                `2️⃣ 主手短劍②: 命中 <b>${h2+9}</b> | 傷害: <b>${d2}</b><br>` +
-                `3️⃣ 副手匕首③: 命中 <b>${h3+9}</b> | 傷害: <b>${d3}</b><br>` +
-                `👉 <span style="color:var(--success)"><b>全中總傷估算：${d1+d2+d3} 點物理穿刺！</b></span>`);
-        }
-    </script>
 </body>
 </html>
