@@ -1,0 +1,14 @@
+{
+  "defense": {
+    "label": "Defense",
+    "description": "Adds +1 to AC when active",
+    "type": "style",
+    "bonuses": { "ac": 1 }
+  },
+  "archery": {
+    "label": "Archery",
+    "description": "Adds +2 to longbow hit when active",
+    "type": "style",
+    "bonuses": { "longbowHit": 2 }
+  }
+}

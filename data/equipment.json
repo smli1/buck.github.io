@@ -1,0 +1,16 @@
+{
+  "armors": {
+    "Padded": { "ac": 11, "dexCap": null, "type": "light" },
+    "Leather": { "ac": 11, "dexCap": null, "type": "light" },
+    "Studded Leather": { "ac": 12, "dexCap": null, "type": "light" },
+    "Hide": { "ac": 12, "dexCap": 2, "type": "medium" },
+    "Scale Mail": { "ac": 14, "dexCap": 2, "type": "medium" },
+    "Chain Shirt": { "ac": 13, "dexCap": 2, "type": "medium" },
+    "Plate": { "ac": 18, "dexCap": 0, "type": "heavy" },
+    "Chain Mail": { "ac": 16, "dexCap": 0, "type": "heavy" }
+  },
+  "weapons": {
+    "Longbow": { "range": "150/600", "damage": "1d8", "type": "ranged" },
+    "Shortbow": { "range": "80/320", "damage": "1d6", "type": "ranged" }
+  }
+}

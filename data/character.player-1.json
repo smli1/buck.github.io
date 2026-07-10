@@ -1,0 +1,65 @@
+{
+  "id": "player-1",
+  "name": "巴克",
+  "level": 9,
+  "currentHp": 76,
+  "styles": {
+    "defense": true,
+    "archery": false
+  },
+  "resources": {},
+  "abilities": {
+    "str": 13,
+    "dex": 15,
+    "con": 14,
+    "int": 11,
+    "wis": 11,
+    "cha": 8
+  },
+  "background": {
+    "name": "士兵",
+    "bonuses": {
+      "dex": 2
+    }
+  },
+  "notes": "",
+  "feats": [
+    {
+      "name": "Great Weapon Master",
+      "level": 4,
+      "bonuses": {
+        "dex": 1,
+        "rangedDamage": 4
+      }
+    },
+    {
+      "name": "Sharpshooter",
+      "level": 6,
+      "bonuses": {
+        "dex": 1
+      }
+    },
+    {
+      "name": "Mage Slayer",
+      "level": 8,
+      "bonuses": {
+        "dex": 1
+      },
+      "notes": "達滿值 +5 when reaching cap"
+    },
+    {
+      "name": "Savage Attacker",
+      "notes": "1d8 ranged damage may be rerolled on 1-2; take higher",
+      "effects": {
+        "savageReroll": true
+      }
+    },
+    {
+      "name": "Lucky",
+      "notes": "Provides 4 luck points per day for rerolls/control",
+      "effects": {
+        "luckPoints": 4
+      }
+    }
+  ]
+}

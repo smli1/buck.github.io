@@ -1,0 +1,25 @@
+{
+  "Great Weapon Master": {
+    "level": 4,
+    "bonuses": { "dex": 1 },
+    "notes": "Melee-focused; grants +1 DEX on acquisition"
+  },
+  "Sharpshooter": {
+    "level": 6,
+    "bonuses": { "dex": 1 },
+    "notes": "Ranged-focused; grants +1 DEX on acquisition"
+  },
+  "Mage Slayer": {
+    "level": 8,
+    "bonuses": { "dex": 1 },
+    "notes": "Anti-mage; grants +1 DEX; reaching cap may give additional benefit"
+  },
+  "Savage Attacker": {
+    "effects": { "savageReroll": true },
+    "notes": "When dealing weapon damage, reroll 1d8 on low rolls and take higher"
+  },
+  "Lucky": {
+    "effects": { "luckPoints": 4 },
+    "notes": "Provides 4 luck points per day usable for rerolls or advantage-like effects"
+  }
+}
