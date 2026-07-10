@@ -49,12 +49,26 @@ export function initializeKeywordTooltips() {
     };
 
     document.querySelectorAll('.keyword').forEach(el => {
-        const text = el.dataset.tooltip;
-        if (!text) return;
+        if (el.dataset.tooltipBound === 'true') return;
+
+        const resolveTooltipText = () => {
+            const key = el.dataset.tooltipKey;
+            if (key && window.character?.getTooltipText) {
+                const dynamicText = window.character.getTooltipText(key);
+                if (dynamicText) {
+                    el.dataset.tooltip = dynamicText;
+                    return dynamicText;
+                }
+            }
+            return el.dataset.tooltip || '';
+        };
+
+        const initialText = resolveTooltipText();
+        if (!initialText) return;
 
         el.addEventListener('mouseenter', () => {
             clearTimeout(touchTimer);
-            showTooltip(el, text);
+            showTooltip(el, resolveTooltipText());
         });
         el.addEventListener('mouseleave', () => {
             clearTimeout(touchTimer);
@@ -63,7 +77,7 @@ export function initializeKeywordTooltips() {
         el.addEventListener('touchstart', event => {
             event.preventDefault();
             clearTimeout(touchTimer);
-            scheduleTooltip(el, text);
+            scheduleTooltip(el, resolveTooltipText());
         }, { passive: false });
         el.addEventListener('touchend', () => {
             clearTimeout(touchTimer);
@@ -73,6 +87,8 @@ export function initializeKeywordTooltips() {
             clearTimeout(touchTimer);
             hideTooltip();
         });
+
+        el.dataset.tooltipBound = 'true';
     });
 
     document.addEventListener('scroll', hideTooltip, true);

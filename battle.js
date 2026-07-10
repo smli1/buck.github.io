@@ -166,7 +166,7 @@ export class BattleViewModel {
 
     toggleLogMinimize(event) {
         event.stopPropagation();
-        this.model.toggleLogMinimized();
+        this.model.toggleLogMinimized(); 
         this.view.render(this.model.getSnapshot());
     }
 
@@ -180,6 +180,8 @@ export class BattleViewModel {
         const clientX = touch ? touch.clientX : event.clientX;
         const clientY = touch ? touch.clientY : event.clientY;
         this.dragState.active = true;
+        // signal global dragging state so other handlers (page flip) can ignore touches
+        try { window.__isDraggingPopup = true; } catch (e) { /* ignore */ }
         this.dragState.offsetX = clientX - this.view.logPanel.offsetLeft;
         this.dragState.offsetY = clientY - this.view.logPanel.offsetTop;
         this.view.logPanel.classList.add('dragging');
@@ -194,6 +196,7 @@ export class BattleViewModel {
         if (this.view.logPanel) {
             this.view.logPanel.classList.remove('dragging');
         }
+        try { window.__isDraggingPopup = false; } catch (e) { /* ignore */ }
     }
 
     dragLog(event) {

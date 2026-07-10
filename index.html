@@ -3,18 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚔️ 巴克 9等戰鬥實戰控制台 ( 橫放專用)</title>
+    <title>⚔️ 巴克 Battle Control Panel</title>
         <link rel="stylesheet" href="styles.css">
 
 </head>
 <body>
 
-    <header style="display:flex; align-items:center; justify-content:space-between;">
-        <h1 style="margin:0;">⚔️ 巴克 9等戰鬥實戰控制台</h1>
-        <button id="settings-cog" class="btn-icon" onclick="openSettingsPopup()" aria-label="Settings" title="設定">⚙️</button>
-    </header>
+    <div class="page-flip-shell" id="page-flip-shell">
+        <section class="page-face front-face is-active">            
+            
+            <!-- Settings popup overlay -->
+            <div id="settings-overlay" class="manual-popup-overlay hidden" onclick="if(event.target===this){ this.classList.add('hidden'); this.style.display='none'; } if(typeof closeSettingsPopup==='function'){ closeSettingsPopup(event); }" style="position:fixed; inset:0; z-index:120;">
+                <div id="settings-popup" class="manual-popup settings-popup" style="background:#0b1220; color:#fff; padding:18px; border-radius:8px; width:640px; max-width:95%; box-shadow:0 8px 30px rgba(0,0,0,0.6);">
+                    <div class="manual-popup-header" style="align-items:center;">
+                        <span>設定</span>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <button class="btn btn-icon" onclick="(function(){const o=document.getElementById('settings-overlay'); if(o){ o.classList.add('hidden'); o.style.display='none'; }})();">✕</button>
+                        </div>
+                    </div>
+                    <div class="manual-popup-body settings-body" style="grid-template-columns: 1fr 1fr;">
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div style="font-weight:700; color:var(--secondary);">匯出 / 儲存</div>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn" type="button" style="flex:1;" onclick="exportCharacterToFile()">匯出角色 (下載)</button>
+                                <button class="btn" type="button" style="flex:1;" onclick="saveCharacter()">儲存到 LocalStorage</button>
+                            </div>
+                            <div style="font-size:0.9rem; color:var(--text-muted);">匯出可作為備份或在其他裝置匯入。儲存會覆寫瀏覽器的本地角色資料。</div>
+                            <div style="margin-top:6px;">
+                                <div style="font-weight:700; color:var(--secondary); margin-bottom:6px;">目前角色摘要</div>
+                                <div id="settings-character-summary" style="font-size:0.95rem; color:var(--text-main);">--</div>
+                                <div style="margin-top:12px; padding:10px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-card);">
+                                    <div style="font-weight:700; color:var(--secondary); margin-bottom:8px;">角色數值設定</div>
+                                    <div style="display:grid; gap:8px;">
+                                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">
+                                                角色名稱
+                                                <input id="settings-char-name" type="text" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" />
+                                            </label>
+                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">
+                                                等級
+                                                <input id="settings-char-level" type="number" min="1" max="20" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" />
+                                            </label>
+                                        </div>
+                                        <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:8px;">
+                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">STR<input id="settings-ability-str" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">DEX<input id="settings-ability-dex" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">CON<input id="settings-ability-con" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">INT<input id="settings-ability-int" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">WIS<input id="settings-ability-wis" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">CHA<input id="settings-ability-cha" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
+                                        </div>
+                                        <div style="display:flex; gap:8px; justify-content:flex-end;">
+                                            <button class="btn" type="button" onclick="applyCharacterSetupFromForm()">套用數值</button>
+                                            <button class="btn" type="button" onclick="resetCharacterSetupForm()">重置</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+                                    <label style="font-weight:700; color:var(--secondary);">背景：</label>
+                                    <select id="settings-background-select" style="flex:1; padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);">
+                                        <option value="">-- 選擇背景 --</option>
+                                        <option value="Soldier">Soldier / 士兵</option>
+                                        <option value="Criminal">Criminal / 罪犯</option>
+                                        <option value="Acolyte">Acolyte / 祭司學徒</option>
+                                    </select>
+                                    <button class="btn" type="button" style="min-width:88px;" onclick="(async function(){ const s=document.getElementById('settings-background-select'); if(!s) return; const name=s.value; if(!name) return alert('請選擇背景'); const res = await applyBackgroundByName(name); if(!res) alert('找不到背景加成'); else renderSettingsSummary(); })()">套用</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div style="font-weight:700; color:var(--secondary);">匯入角色</div>
+                            <div id="import-dropzone" class="import-dropzone" style="padding:12px; border:1px dashed var(--border-color); border-radius:8px; background:var(--bg-card);">
+                                <div style="margin-bottom:8px; color:var(--text-muted);">將 JSON 檔拖曳到此處，或使用下方選擇檔案匯入。</div>
+                                <input type="file" id="settings-char-import-file" accept="application/json,.json" />
+                                <div style="display:flex; gap:8px; margin-top:8px;">
+                                    <button class="btn" type="button" onclick="(function(){ const el=document.getElementById('settings-char-import-file'); if(el && el.files && el.files[0]) { importCharacterFile(el.files[0]).then(()=>{ document.getElementById('settings-overlay').classList.add('hidden'); document.getElementById('settings-overlay').style.display='none'; }).catch(e=>alert('匯入失敗：'+(e.message||e))); } else alert('請先選擇一個 JSON 檔'); })()">匯入</button>
+                                    <button class="btn" type="button" onclick="(function(){ const el=document.getElementById('settings-char-import-file'); el.value=''; })()">清除選擇</button>
+                                </div>
+                            </div>
+                            <div style="font-size:0.9rem; color:var(--text-muted);">匯入會覆寫目前角色數值。請先備份或儲存。</div>
+                            <!-- <div style="margin-top:12px; padding:10px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-card);">
+                                <div style="font-weight:700; color:var(--secondary); margin-bottom:8px;">5e 角色資料生成</div>
+                                <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:8px;">依照目前角色與 5e_data 自動整理背景、職業、專長、戰鬥風格與資源建議。</div>
+                                <button id="fivee-generate-btn" class="btn" type="button">生成 5e 詳細資料</button>
+                                <div id="fivee-generated-details" style="margin-top:8px; display:flex; flex-direction:column; gap:8px; max-height:320px; overflow:auto;"></div>
+                            </div> -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <header class="page-header" style="display:flex; align-items:center; justify-content:space-between;">
+                <h1 style="margin:0;">⚔️ 巴克 Battle Control Panel</h1>
+                <div class="header-actions">
+                    <button class="btn-icon" type="button" data-page-toggle="true" onclick="togglePageFlip()" aria-label="Switch page" title="切換頁面">🎭 Role-Playing</button>
+                    <button id="settings-cog" class="btn-icon" onclick="openSettingsPopup()" aria-label="Settings" title="設定">⚙️</button>
+                </div>
+            </header>
 
-    <div class="main-container">
+            <div class="main-container">
         
         <!-- ⬅️ 左側欄位：資源與狀態固定監控 -->
         <div class="sidebar">
@@ -48,80 +135,6 @@
                         </div> -->
                     </div>
 
-                        <!-- Settings popup overlay -->
-                        <div id="settings-overlay" class="manual-popup-overlay hidden" onclick="if(event.target===this){ this.classList.add('hidden'); this.style.display='none'; } if(typeof closeSettingsPopup==='function'){ closeSettingsPopup(event); }" style="position:fixed; inset:0; z-index:120;">
-                            <div id="settings-popup" class="manual-popup settings-popup" style="background:#0b1220; color:#fff; padding:18px; border-radius:8px; width:640px; max-width:95%; box-shadow:0 8px 30px rgba(0,0,0,0.6);">
-                                <div class="manual-popup-header" style="align-items:center;">
-                                    <span>設定</span>
-                                    <div style="display:flex; gap:8px; align-items:center;">
-                                        <button class="btn btn-icon" onclick="(function(){const o=document.getElementById('settings-overlay'); if(o){ o.classList.add('hidden'); o.style.display='none'; }})();">✕</button>
-                                    </div>
-                                </div>
-                                <div class="manual-popup-body settings-body" style="grid-template-columns: 1fr 1fr;">
-                                    <div style="display:flex; flex-direction:column; gap:12px;">
-                                        <div style="font-weight:700; color:var(--secondary);">匯出 / 儲存</div>
-                                        <div style="display:flex; gap:8px;">
-                                            <button class="btn" type="button" style="flex:1;" onclick="exportCharacterToFile()">匯出角色 (下載)</button>
-                                            <button class="btn" type="button" style="flex:1;" onclick="saveCharacter()">儲存到 LocalStorage</button>
-                                        </div>
-                                        <div style="font-size:0.9rem; color:var(--text-muted);">匯出可作為備份或在其他裝置匯入。儲存會覆寫瀏覽器的本地角色資料。</div>
-                                        <div style="margin-top:6px;">
-                                            <div style="font-weight:700; color:var(--secondary); margin-bottom:6px;">目前角色摘要</div>
-                                            <div id="settings-character-summary" style="font-size:0.95rem; color:var(--text-main);">--</div>
-                                            <div style="margin-top:12px; padding:10px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-card);">
-                                                <div style="font-weight:700; color:var(--secondary); margin-bottom:8px;">角色數值設定</div>
-                                                <div style="display:grid; gap:8px;">
-                                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">
-                                                            角色名稱
-                                                            <input id="settings-char-name" type="text" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" />
-                                                        </label>
-                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">
-                                                            等級
-                                                            <input id="settings-char-level" type="number" min="1" max="20" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" />
-                                                        </label>
-                                                    </div>
-                                                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:8px;">
-                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">STR<input id="settings-ability-str" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">DEX<input id="settings-ability-dex" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">CON<input id="settings-ability-con" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">INT<input id="settings-ability-int" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">WIS<input id="settings-ability-wis" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                                        <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">CHA<input id="settings-ability-cha" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                                    </div>
-                                                    <div style="display:flex; gap:8px; justify-content:flex-end;">
-                                                        <button class="btn" type="button" onclick="applyCharacterSetupFromForm()">套用數值</button>
-                                                        <button class="btn" type="button" onclick="resetCharacterSetupForm()">重置</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
-                                                <label style="font-weight:700; color:var(--secondary);">背景：</label>
-                                                <select id="settings-background-select" style="flex:1; padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);">
-                                                    <option value="">-- 選擇背景 --</option>
-                                                    <option value="Soldier">Soldier / 士兵</option>
-                                                    <option value="Criminal">Criminal / 罪犯</option>
-                                                    <option value="Acolyte">Acolyte / 祭司學徒</option>
-                                                </select>
-                                                <button class="btn" type="button" style="min-width:88px;" onclick="(async function(){ const s=document.getElementById('settings-background-select'); if(!s) return; const name=s.value; if(!name) return alert('請選擇背景'); const res = await applyBackgroundByName(name); if(!res) alert('找不到背景加成'); else renderSettingsSummary(); })()">套用</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div style="display:flex; flex-direction:column; gap:12px;">
-                                        <div style="font-weight:700; color:var(--secondary);">匯入角色</div>
-                                        <div id="import-dropzone" class="import-dropzone" style="padding:12px; border:1px dashed var(--border-color); border-radius:8px; background:var(--bg-card);">
-                                            <div style="margin-bottom:8px; color:var(--text-muted);">將 JSON 檔拖曳到此處，或使用下方選擇檔案匯入。</div>
-                                            <input type="file" id="settings-char-import-file" accept="application/json,.json" />
-                                            <div style="display:flex; gap:8px; margin-top:8px;">
-                                                <button class="btn" type="button" onclick="(function(){ const el=document.getElementById('settings-char-import-file'); if(el && el.files && el.files[0]) { importCharacterFile(el.files[0]).then(()=>{ document.getElementById('settings-overlay').classList.add('hidden'); document.getElementById('settings-overlay').style.display='none'; }).catch(e=>alert('匯入失敗：'+(e.message||e))); } else alert('請先選擇一個 JSON 檔'); })()">匯入</button>
-                                                <button class="btn" type="button" onclick="(function(){ const el=document.getElementById('settings-char-import-file'); el.value=''; })()">清除選擇</button>
-                                            </div>
-                                        </div>
-                                        <div style="font-size:0.9rem; color:var(--text-muted);">匯入會覆寫目前角色數值。請先備份或儲存。</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                     <details style="margin-bottom:6px;" >
                         <summary style="font-weight:700; color:var(--secondary);">升級專長路線（4 / 6 / 8 等）</summary>
@@ -152,11 +165,11 @@
                         <div style="margin-top:8px;">
                             <!-- <p class="tooltip-note">將游標移到數值前詞彙，可查看其來源與計算方式。</p> -->
                             <ul>
-                                <li><span class="keyword" data-tooltip="箭術命中：DEX +5、熟練 +4、射手風格 +2。">長弓命中：<span id="summary-longbow-hit">--</span></span>（DEX +5 / 熟練 +4 / 射手風格 +2）</li>
-                                <li><span class="keyword" data-tooltip="盜賊工具：藉由熟練加值可在鎖匠與陷阱上擲出 +9。">盜賊工具（開鎖/陷阱）：+9</span></li>
-                                <li><span class="keyword" data-tooltip="潛行技能可加上 DEX +5、熟練 +4。鑲釘皮甲不阻礙潛行。">潛行：+9</span>（戴鑲釘皮甲不阻礙）</li>
-                                <li><span class="keyword" data-tooltip="護甲類型：鑲釘皮甲 12 + DEX 5 + 防禦風格 1。">AC：<span id="summary-ac">--</span></span>（鑲釘皮甲 12 + DEX 5 + 防禦風格 1）</li>
-                                <li><span class="keyword" data-tooltip="最大生命值由戰士 9 等的生命骰與體質加值組成。">Max HP：<span id="summary-max-hp">--</span></span></li>
+                                <li><span class="keyword" data-tooltip-key="longbow" data-tooltip="">長弓命中：<span id="summary-longbow-hit">--</span></span>（敏捷調整值 / 熟練加值 / 箭術風格）</li>
+                                <li><span class="keyword" data-tooltip="盜賊工具：+9（來自熟練加值與工具熟練）。">盜賊工具（開鎖/陷阱）：+9</span></li>
+                                <li><span class="keyword" data-tooltip="潛行：+9（來自 DEX +5、熟練 +4；鑲釘皮甲不阻礙）。">潛行：+9</span>（戴鑲釘皮甲不阻礙）</li>
+                                <li><span class="keyword" data-tooltip-key="ac" data-tooltip="">AC：<span id="summary-ac">--</span></span>（鑲釘皮甲 12 + DEX 5 + 防禦風格 1）</li>
+                                <li><span class="keyword" data-tooltip-key="hp" data-tooltip="">Max HP：<span id="summary-max-hp">--</span></span></li>
                             </ul>
                         </div>
                     </details>
@@ -164,7 +177,7 @@
                     <details style="margin-top:8px;">
                         <summary style="font-weight:700; color:var(--accent);">9 等戰士特性速查</summary>
                         <div style="margin-top:8px; line-height:1.5; font-size:0.95rem;">
-                            <p class="tooltip-note">懸停或長按特定詞彙可查看詳細效果。</p>
+                            <!-- <p class="tooltip-note">懸停或長按特定詞彙可查看詳細效果。</p> -->
                             <ul>
                                 <li><strong>等級 1</strong>：<span class="keyword" data-tooltip="戰鬥風格：首次選擇一項戰鬥風格，之後每次升級可更換。推薦防禦風格以提升 AC。">戰鬥風格</span>，選擇一項戰鬥風格，建議防禦；每次升級可更換。</li>
                                 <li><strong>等級 1</strong>：<span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值。短休後可使用一次，長休恢復。">回氣</span>，附贈動作恢復 1d10 + 戰士等級生命值，短休恢復 1 次，長休恢復所有。</li>
@@ -194,15 +207,15 @@
                 <div class="stats-grid">
                     <div class="stat-box">
                         <span class="stat-label">🛡️ 防禦度 (AC)</span>
-                        <span class="stat-value" id="stat-ac">--</span>
+                        <span class="stat-value keyword" id="stat-ac" data-tooltip-key="ac" data-tooltip="">--</span>
                     </div>
                     <div class="stat-box">
                         <span class="stat-label">⚡ 先攻檢定</span>
-                        <span class="stat-value" style="color:var(--secondary)"><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">永久優勢</span></span>
+                        <span class="stat-value keyword" style="color:var(--secondary)" data-tooltip="先攻檢定：擲兩個 d20，取較高的結果，視為永久優勢。">永久優勢</span>
                     </div>
                     <div class="stat-box" style="grid-column: span 2; border-left: 3px solid var(--primary);">
                         <span class="stat-label">🎯 暴擊要求</span>
-                        <span class="stat-value" style="color:var(--primary); font-size:1.05rem;">d20 擲出 19-20 即<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>！</span>
+                        <span class="stat-value keyword" style="color:var(--primary); font-size:1.05rem;" data-tooltip="暴擊要求：當 d20 擲出 19 或 20 時，攻擊將造成暴擊，通常為傷害骰翻倍。">d20 擲出 19-20 即<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>！</span>
                     </div>
                 </div>
             </div>
@@ -226,33 +239,48 @@
                 <span class="stat-label" style="font-size:0.9rem; color:#fff; font-weight:700; margin-bottom:8px;">🔋 核心資源追蹤</span>
                 <div class="tracker-row" data-resource="secondwind">
                     <span><span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值。短休後可使用一次，長休恢復。">🩸 回氣</span> (長休 4 次)</span>
-                    <div class="checkbox-group" data-resource-group="secondwind">
-                        <input type="checkbox" class="tracker-checkbox">
-                        <input type="checkbox" class="tracker-checkbox">
-                        <input type="checkbox" class="tracker-checkbox">
-                        <input type="checkbox" class="tracker-checkbox">
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <div class="checkbox-group" data-resource-group="secondwind">
+                            <input type="checkbox" class="tracker-checkbox">
+                            <input type="checkbox" class="tracker-checkbox">
+                            <input type="checkbox" class="tracker-checkbox">
+                            <input type="checkbox" class="tracker-checkbox">
+                        </div>
                     </div>
                 </div>
-                <div class="tracker-row">
+                <div class="tracker-row" data-resource="lucky">
                     <span>🍀 <span class="keyword" data-tooltip="Lucky：每日 4 次幸運點，可用於重新擲一個 d20 或使敵方攻擊重擲。">Lucky</span>：每日 4 點幸運點，提供擲骰控制。</li></span>
-                    <div class="checkbox-group">
-                        <input type="checkbox" class="tracker-checkbox">
-                        <input type="checkbox" class="tracker-checkbox">
-                        <input type="checkbox" class="tracker-checkbox">
-                        <input type="checkbox" class="tracker-checkbox">
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" class="tracker-checkbox">
+                            <input type="checkbox" class="tracker-checkbox">
+                            <input type="checkbox" class="tracker-checkbox">
+                            <input type="checkbox" class="tracker-checkbox">
+                        </div>
                     </div>
                 </div>
-                <div class="tracker-row">
+                <div class="tracker-row" data-resource="heroic-inspiration">
                     <span>⭐ <span class="keyword" data-tooltip="Heroic Inspiration：長休後獲得一次重骰機會，可對攻擊檢定、能力檢定或豁免檢定使用。">英雄激勵</span> (長休 1 次)</span>
-                    <input type="checkbox" class="tracker-checkbox">
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <input type="checkbox" class="tracker-checkbox">
+                    </div>
                 </div>
                 <div class="tracker-row" data-resource="action-surge">
                     <span>🕺🏻 <span class="keyword" data-tooltip="動作如潮：本回合可額外獲得一個動作。短休或長休後恢復。17 級後每次休息可用 2 次。">動作如潮</span> (短/長休 1 次)</span>
-                    <input type="checkbox" class="tracker-checkbox" data-resource-group="action-surge">
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <input type="checkbox" class="tracker-checkbox" data-resource-group="action-surge">
+                    </div>
                 </div>
                 <div class="tracker-row" data-resource="unyielding">
                     <span>🛡️ 反應：<span class="keyword" data-tooltip="不屈：豁免檢定失敗時可重投，並加上戰士等級的固定值。須採用新結果，長休恢復。">不屈重投</span> (長休 1 次)</span>
-                    <input type="checkbox" class="tracker-checkbox" data-resource-group="unyielding">
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                        <input type="checkbox" class="tracker-checkbox" data-resource-group="unyielding">
+                    </div>
+                </div>
+                <div style="margin:12px 0; border-color:var(--border-color);"></div>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+                    <button class="btn" type="button" data-rest-mode="short" style="padding:4px 8px; font-size:0.8rem;">短休</button>
+                    <button class="btn" type="button" data-rest-mode="long" style="padding:4px 8px; font-size:0.8rem;">長休</button>
                 </div>
                 <!-- settings popup is available via the cog button in the header -->
             </div>
@@ -400,7 +428,7 @@
         <div class="manual-popup" onclick="event.stopPropagation()">
             <div class="manual-popup-header">
                 <span>手動骰子輸入</span>
-                <button class="btn btn-phrase" style="padding: 6px 10px; font-size:0.9rem;" onclick="closeManualPopup()">關閉</button>
+                <!-- <button class="btn btn-phrase" style="padding: 6px 10px; font-size:0.9rem;" onclick="closeManualPopup()">關閉</button> -->
             </div>
             <div class="manual-popup-body">
                 <div class="manual-popup-section">
@@ -561,12 +589,49 @@
                 <button class="btn btn-phrase" onclick="clearManualPopup()">清除全部</button>
                 <!-- <button class="btn btn-roll" style="background:#f59e0b; color:#000;" onclick="recordManualMiss()">❌ 記錄未命中</button> -->
                 <button class="btn btn-roll" onclick="calculateManualScenario()">📊 計算傷害</button>
-                <button class="btn btn-roll" onclick="closeManualPopup()">儲存並關閉</button>
+                <!-- <button class="btn btn-roll" onclick="closeManualPopup()">儲存並關閉</button> -->
             </div>
         </div>
     </div>
 
         <script type="module" src="app.js"></script>
 
+        </section>
+
+        <section class="page-face back-face">
+            <div class="page-face-inner">
+                <header class="page-header" style="display:flex; align-items:center; justify-content:space-between;">
+                    <h1 style="margin:0;">🎭 角色扮演 / 技能 / 調查</h1>
+                    <div class="header-actions">
+                        <button class="btn-icon" type="button" data-page-toggle="true" onclick="togglePageFlip()" aria-label="Switch page" title="切換頁面">⚔️ 戰鬥頁</button>
+                    </div>
+                </header>
+                <div class="roleplay-page">
+                    <div class="roleplay-grid">
+                        <div class="card">
+                            <h2 style="margin-bottom:10px; color:var(--secondary);">角色扮演</h2>
+                            <ul class="roleplay-list">
+                                <li>用真實的口吻描述角色的情緒與目標。</li>
+                                <li>在交涉、威嚇與表演中強化台詞節奏。</li>
+                                <li>把每次行動都連結到角色動機與背景。</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h2 style="margin-bottom:10px; color:var(--accent);">技能與調查</h2>
+                            <ul class="roleplay-list">
+                                <li>檢查環境、線索與隱藏訊息。</li>
+                                <li>確認技能檢定的適用情境與難度。</li>
+                                <li>記錄可疑人物、地點與與任務相關的細節。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2 style="margin-bottom:10px; color:var(--warning);">調查筆記</h2>
+                        <textarea class="roleplay-notes" placeholder="輸入調查線索、角色動機或技能計劃..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
 </body>
 </html>

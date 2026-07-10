@@ -19,9 +19,146 @@ import {
     setManualDiceValue,
     updateManualFieldsVisibility
 } from './manual.js';
-import { initializePopupInteractionHandlers, bringElementToFront } from './utils.js';
+import { initializePopupInteractionHandlers } from './utils.js';
+import { initializeCharacterSettings } from './character-settings.js';
+import { createFiveEDataStore, exposeFiveEDataStoreToWindow } from './fivee-data.js';
 
 let character = null;
+
+function togglePageFlip(force) {
+    const shell = document.getElementById('page-flip-shell');
+    if (!shell) return false;
+    const next = typeof force === 'boolean' ? force : !shell.classList.contains('is-flipped');
+    shell.classList.toggle('is-flipped', next);
+
+    const frontFace = shell.querySelector('.front-face');
+    const backFace = shell.querySelector('.back-face');
+    if (frontFace && backFace) {
+        frontFace.classList.toggle('is-active', !next);
+        backFace.classList.toggle('is-active', next);
+    }
+
+    document.querySelectorAll('[data-page-toggle]').forEach((button) => {
+        button.textContent = next ? '⚔️ Battle' : '🎭 Role-Playing';
+    });
+    return next;
+}
+
+function attachPageFlipTouchHandlers() {
+    const shell = document.getElementById('page-flip-shell');
+    if (!shell) return;
+
+    let startX = 0;
+    let startY = 0;
+    let isTouchSwipe = false;
+    let hasHorizontalIntent = false;
+    const threshold = 70;
+
+    shell.addEventListener('touchstart', (event) => {
+        // ignore page-flip when a popup (log) is being dragged
+        if (window.__isDraggingPopup) return;
+        // also ignore if the touch started inside the floating log panel
+        try {
+            const t = event.target;
+            if (t && t.closest && t.closest('#floating-log-panel')) return;
+        } catch (e) { /* ignore */ }
+        const touch = event.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        isTouchSwipe = true;
+        hasHorizontalIntent = false;
+    }, { passive: true });
+
+    shell.addEventListener('touchmove', (event) => {
+        if (window.__isDraggingPopup) return;
+        if (!isTouchSwipe) return;
+        const touch = event.touches[0];
+        const deltaX = touch.clientX - startX;
+        const deltaY = touch.clientY - startY;
+
+        if (Math.abs(deltaY) > Math.abs(deltaX)) {
+            isTouchSwipe = false;
+            hasHorizontalIntent = false;
+            return;
+        }
+
+        if (Math.abs(deltaX) > 12) {
+            hasHorizontalIntent = true;
+        }
+    }, { passive: true });
+
+    shell.addEventListener('touchend', (event) => {
+        if (window.__isDraggingPopup) { isTouchSwipe = false; hasHorizontalIntent = false; return; }
+        if (!isTouchSwipe || !hasHorizontalIntent) {
+            isTouchSwipe = false;
+            hasHorizontalIntent = false;
+            return;
+        }
+
+        const touch = event.changedTouches[0];
+        const deltaX = touch.clientX - startX;
+        const deltaY = touch.clientY - startY;
+        const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+
+        if (isHorizontalSwipe && Math.abs(deltaX) > threshold) {
+            togglePageFlip(deltaX < 0);
+        }
+
+        isTouchSwipe = false;
+        hasHorizontalIntent = false;
+    }, { passive: true });
+
+    shell.addEventListener('touchcancel', () => {
+        isTouchSwipe = false;
+        hasHorizontalIntent = false;
+    }, { passive: true });
+}
+
+function attachPageScrollHandlers() {
+    const scrollTargets = document.querySelectorAll('.sidebar, .content-area, .roleplay-page');
+
+    scrollTargets.forEach((target) => {
+        let touchStartY = 0;
+        let touchStartX = 0;
+
+        target.addEventListener('wheel', (event) => {
+            const canScroll = target.scrollHeight > target.clientHeight;
+            if (!canScroll || Math.abs(event.deltaY) === 0) return;
+
+            const atTop = target.scrollTop <= 0;
+            const atBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1;
+            if ((event.deltaY > 0 && !atBottom) || (event.deltaY < 0 && !atTop)) {
+                event.preventDefault();
+                target.scrollTop = Math.max(0, Math.min(target.scrollHeight - target.clientHeight, target.scrollTop + event.deltaY));
+            }
+        }, { passive: false });
+
+        target.addEventListener('touchstart', (event) => {
+            const touch = event.touches[0];
+            touchStartY = touch.clientY;
+            touchStartX = touch.clientX;
+        }, { passive: true });
+
+        target.addEventListener('touchmove', (event) => {
+            const touch = event.touches[0];
+            const deltaY = touch.clientY - touchStartY;
+            const deltaX = touch.clientX - touchStartX;
+            const canScroll = target.scrollHeight > target.clientHeight;
+
+            if (!canScroll || Math.abs(deltaY) <= 2 || Math.abs(deltaY) < Math.abs(deltaX)) {
+                return;
+            }
+
+            const atTop = target.scrollTop <= 0;
+            const atBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1;
+            if ((deltaY > 0 && !atTop) || (deltaY < 0 && !atBottom)) {
+                event.preventDefault();
+                target.scrollTop -= deltaY;
+                touchStartY = touch.clientY;
+            }
+        }, { passive: false });
+    });
+}
 
 function exposeBattleHelpers(viewModel) {
     window.modHP = (amt) => viewModel.modHP(amt);
@@ -56,116 +193,147 @@ function exposeManualHelpers() {
     window.updateManualFieldsVisibility = updateManualFieldsVisibility;
 }
 
-function renderCharacterSetupForm() {
-    const activeCharacter = window.character || character;
-    if (!activeCharacter) return;
-    const st = activeCharacter.getState();
-    const nameEl = document.getElementById('settings-char-name');
-    const levelEl = document.getElementById('settings-char-level');
-    if (nameEl) nameEl.value = st.name || '';
-    if (levelEl) levelEl.value = st.level ?? 1;
-    for (const key of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
-        const el = document.getElementById(`settings-ability-${key}`);
-        if (el) {
-            const value = Number(st.abilities?.[key] ?? activeCharacter._baseAbilities?.[key] ?? 10);
-            el.value = Number.isFinite(value) ? value : 10;
+async function renderFiveECharacterDetails() {
+    const resultsEl = document.getElementById('fivee-generated-details');
+    const generateButton = document.getElementById('fivee-generate-btn');
+    if (!resultsEl) return;
+
+    const activeCharacter = window.character;
+    if (!activeCharacter) {
+        resultsEl.innerHTML = '<div style="font-size:0.9rem; color:#fda4af;">角色尚未初始化</div>';
+        return;
+    }
+
+    if (generateButton) generateButton.disabled = true;
+    resultsEl.innerHTML = '<div style="font-size:0.9rem; color:var(--text-muted);">正在從 5e 資料生成角色內容…</div>';
+
+    try {
+        const store = window.fiveEDataStore;
+        if (!store?.buildCharacter5eInsights) {
+            resultsEl.innerHTML = '<div style="font-size:0.9rem; color:#fda4af;">5e 資料介面尚未載入</div>';
+            return;
         }
+
+        const insights = await store.buildCharacter5eInsights(activeCharacter);
+        const backgroundName = insights.background?.name || insights.backgroundName || '—';
+        const className = insights.classEntry?.name || insights.className || '—';
+        const backgroundSkillsHtml = (insights.backgroundSkills || []).slice(0, 4).map((name) => `<span style="display:inline-block; padding:4px 8px; border-radius:999px; background:rgba(255,255,255,0.06); margin:2px; font-size:0.8rem;">${name}</span>`).join('');
+        const backgroundToolsHtml = (insights.backgroundTools || []).slice(0, 4).map((name) => `<span style="display:inline-block; padding:4px 8px; border-radius:999px; background:rgba(255,255,255,0.06); margin:2px; font-size:0.8rem;">${name}</span>`).join('');
+        const featHtml = (insights.featSummaries || []).map((name) => `<li style="margin:4px 0;">${name}</li>`).join('');
+        const styleHtml = (insights.battleStyles || []).map((name) => `<li style="margin:4px 0;">${name}</li>`).join('');
+        const featureHtml = (insights.classFeatures || []).map((name) => `<li style="margin:4px 0;">${name}</li>`).join('');
+        const resourceHtml = (insights.resources || []).map((item) => `<div style="display:flex; justify-content:space-between; gap:8px; font-size:0.85rem; color:var(--text-muted);"><span>${item.label}</span><strong style="color:var(--text-main);">${item.value}</strong></div>`).join('');
+
+        resultsEl.innerHTML = `
+            <div style="display:grid; gap:10px;">
+                <div style="padding:8px; border:1px solid var(--border-color); border-radius:8px; background:rgba(255,255,255,0.03);">
+                    <div style="font-weight:700; color:var(--secondary); margin-bottom:6px;">背景</div>
+                    <div style="font-weight:600; color:var(--text-main);">${backgroundName}</div>
+                    <div style="margin-top:6px;">${backgroundSkillsHtml ? `<div style="margin-bottom:6px;"><strong>技能：</strong>${backgroundSkillsHtml}</div>` : ''}${backgroundToolsHtml ? `<div><strong>工具：</strong>${backgroundToolsHtml}</div>` : ''}</div>
+                </div>
+                <div style="padding:8px; border:1px solid var(--border-color); border-radius:8px; background:rgba(255,255,255,0.03);">
+                    <div style="font-weight:700; color:var(--secondary); margin-bottom:6px;">職業</div>
+                    <div style="font-weight:600; color:var(--text-main);">${className}</div>
+                    <ul style="margin:6px 0 0 16px; padding:0; color:var(--text-muted); font-size:0.85rem;">${featureHtml || '<li>無可顯示的職業特性</li>'}</ul>
+                </div>
+                <div style="padding:8px; border:1px solid var(--border-color); border-radius:8px; background:rgba(255,255,255,0.03);">
+                    <div style="font-weight:700; color:var(--secondary); margin-bottom:6px;">專長</div>
+                    <ul style="margin:6px 0 0 16px; padding:0; color:var(--text-muted); font-size:0.85rem;">${featHtml || '<li>目前尚未設定專長</li>'}</ul>
+                </div>
+                <div style="padding:8px; border:1px solid var(--border-color); border-radius:8px; background:rgba(255,255,255,0.03);">
+                    <div style="font-weight:700; color:var(--secondary); margin-bottom:6px;">戰鬥風格 / 特性</div>
+                    <ul style="margin:6px 0 0 16px; padding:0; color:var(--text-muted); font-size:0.85rem;">${styleHtml || '<li>目前沒有可顯示的戰鬥風格</li>'}</ul>
+                </div>
+                <div style="padding:8px; border:1px solid var(--border-color); border-radius:8px; background:rgba(255,255,255,0.03);">
+                    <div style="font-weight:700; color:var(--secondary); margin-bottom:6px;">資源</div>
+                    <div style="display:grid; gap:6px;">${resourceHtml}</div>
+                </div>
+            </div>`;
+    } catch (error) {
+        resultsEl.innerHTML = `<div style="font-size:0.9rem; color:#fda4af;">生成失敗：${String(error?.message || error)}</div>`;
+    } finally {
+        if (generateButton) generateButton.disabled = false;
     }
 }
 
-function applyCharacterSetupFromForm() {
-    const activeCharacter = window.character || character;
-    if (!activeCharacter) return false;
-    const nameEl = document.getElementById('settings-char-name');
-    const levelEl = document.getElementById('settings-char-level');
-    const abilityValues = {};
-    for (const key of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
-        const el = document.getElementById(`settings-ability-${key}`);
-        if (!el) continue;
-        const value = Number(el.value);
-        if (!Number.isFinite(value) || value < 1 || value > 30) {
-            alert(`${key.toUpperCase()} 的數值必須介於 1 到 30。`);
-            return false;
-        }
-        abilityValues[key] = value;
-    }
-    if (nameEl && nameEl.value) {
-        activeCharacter.set('name', nameEl.value);
-    }
-    if (levelEl) {
-        const level = Number(levelEl.value);
-        if (!Number.isFinite(level) || level < 1 || level > 20) {
-            alert('等級必須介於 1 到 20。');
-            return false;
-        }
-        activeCharacter.set('level', level);
-    }
-    if (Object.keys(abilityValues).length) {
-        activeCharacter.setBaseAbilities?.(abilityValues);
-    }
-    window.renderSettingsSummary?.();
-    renderCharacterSetupForm();
-    return true;
-}
+function initializeFiveEDataLookup() {
+    const generateButton = document.getElementById('fivee-generate-btn');
+    if (!generateButton) return;
 
-function resetCharacterSetupForm() {
-    renderCharacterSetupForm();
-}
-
-function markResourceTracker(resourceKey) {
-    // prefer grouped checkboxes (multiple charges)
-    const group = document.querySelector(`.checkbox-group[data-resource-group="${resourceKey}"]`);
-    if (group) {
-        const boxes = Array.from(group.querySelectorAll('input[type="checkbox"]'));
-        const target = boxes.find((box) => !box.checked);
-        if (!target) return false;
-        target.checked = true;
-        return true;
-    }
-    // fallback: single checkbox with the data attribute on the input itself
-    const single = document.querySelector(`input[type="checkbox"][data-resource-group="${resourceKey}"]`);
-    if (single && !single.checked) {
-        single.checked = true;
-        return true;
-    }
-    return false;
-}
-// expose to other modules / inline handlers so manual.js can call it
-window.markResourceTracker = markResourceTracker;
-
-function handleTrackedButtonClick(event) {
-    const button = event.target.closest('button[data-track-resource]');
-    if (!button) return;
-    const resourceKey = button.dataset.trackResource;
-    if (!resourceKey) return;
-    const marked = markResourceTracker(resourceKey);
-    if (marked) {
-        const label = {
-            secondwind: '回氣',
-            'action-surge': '動作如潮',
-            unyielding: '不屈重投'
-        }[resourceKey] || resourceKey;
-        window.appendLog?.(`<span style="color:var(--secondary)">[資源] 已記錄：${label}</span>`);
-    }
+    generateButton.addEventListener('click', () => renderFiveECharacterDetails());
+    renderFiveECharacterDetails();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    // create character and hydrate battle initial state
-    const saved = Character.load?.() ?? null;
-    character = saved ?? new Character();
+    (async () => {
+        // Try to load a local JSON file at /data/character.player-1.json when served over HTTP.
+        // This allows editing a file in the project and having the app pick it up when running a local server.
+        let saved = null;
+        try {
+            if (location && (location.protocol === 'http:' || location.protocol === 'https:')) {
+                const res = await fetch('/data/character.player-1.json', { cache: 'no-store' });
+                if (res && res.ok) {
+                    const obj = await res.json();
+                    saved = new Character(obj);
+                }
+            }
+        } catch (e) {
+            // ignore fetch errors and fall back
+        }
+
+        window.DB = { feats: null, styles: null, skills: null, equipment: null };
+        const fiveEDataStore = createFiveEDataStore();
+        exposeFiveEDataStoreToWindow(fiveEDataStore);
+        window.lookupFiveEData = async (collection, query, limit = 8) => {
+            const store = window.fiveEDataStore;
+            if (!store) return [];
+            const name = String(collection || '').trim() || 'backgrounds';
+            const term = String(query || '').trim();
+            if (term) {
+                const results = await store.search(name, term);
+                return Array.isArray(results) ? results.slice(0, limit) : [];
+            }
+            const results = await store.getCollection(name);
+            return Array.isArray(results) ? results.slice(0, limit) : [];
+        };
+        try {
+            const [featsRes, stylesRes, equipRes] = await Promise.allSettled([
+                fetch('/data/feats.json', { cache: 'no-store' }),
+                fetch('/data/style.json', { cache: 'no-store' }),
+                fetch('/data/equipment.json', { cache: 'no-store' })
+            ]);
+            const db = { feats: null, styles: null, skills: null, equipment: null };
+            if (featsRes.status === 'fulfilled' && featsRes.value.ok) db.feats = await featsRes.value.json();
+            if (stylesRes.status === 'fulfilled' && stylesRes.value.ok) {
+                db.styles = await stylesRes.value.json();
+                db.skills = db.styles;
+            }
+            if (equipRes.status === 'fulfilled' && equipRes.value.ok) db.equipment = await equipRes.value.json();
+            window.DB = db;
+            if (character && typeof character._syncDerivedStats === 'function') {
+                character._syncDerivedStats();
+            }
+        } catch (e) {
+            window.DB = { feats: null, styles: null, skills: null, equipment: null };
+        }
+
+        if (!saved) saved = Character.load?.() ?? null;
+        character = saved ?? new Character();
+        if (character && typeof character._syncDerivedStats === 'function') {
+            character._syncDerivedStats();
+        }
     const battleApp = createBattleApp(character.getState());
     exposeBattleHelpers(battleApp);
-    // expose the character object so UI can bind to it
+
     window.character = character;
+    window.togglePageFlip = togglePageFlip;
     window.setCharacter = (key, value) => character.set(key, value);
     window.saveCharacter = () => character.save();
-    // expose file export/import helpers
     window.exportCharacterToFile = (filename) => character.exportToFile?.(filename);
     window.importCharacterFile = async (fileOrFileList) => {
         const file = fileOrFileList?.files ? fileOrFileList.files[0] : (fileOrFileList?.[0] || fileOrFileList);
         if (!file) return Promise.reject(new Error('No file provided'));
         await character.loadFromFile(file);
-        // update battle view with new character state
         if (battleApp && battleApp.model && battleApp.view) {
             const nextState = character.getState();
             battleApp.model.state.maxHp = nextState.maxHp;
@@ -176,181 +344,22 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         return true;
     };
-    function openSettingsPopup() {
-        const overlay = document.getElementById('settings-overlay');
-        if (!overlay) return;
-        // clear any inline 'display' that may have been set when closing
-        try { overlay.style.display = ''; } catch (e) {}
-        overlay.classList.remove('hidden');
-        bringElementToFront(overlay);
-        // populate character summary inside the popup
-        try {
-            const summary = document.getElementById('settings-character-summary');
-            if (summary && character) {
-                const st = character.getState();
-                const map = {
-                    str: '力量 (STR)',
-                    dex: '敏捷 (DEX)',
-                    con: '體質 (CON)',
-                    int: '智力 (INT)',
-                    wis: '感知 (WIS)',
-                    cha: '魅力 (CHA)'
-                };
-                let abilitiesHtml = '';
-                if (st.abilities) {
-                    for (const k of ['str','dex','con','int','wis','cha']) {
-                        const score = st.abilities[k];
-                        const mod = character.abilityModifier?.(score) ?? Math.floor((score-10)/2);
-                        const sign = mod >= 0 ? '+'+mod : mod;
-                        const formula = character.abilityFormula?.(score) ?? `${score} → ${sign}`;
-                        abilitiesHtml += `<div style="margin-bottom:6px;"><strong>${map[k]}:</strong> ${score} (<span style="color:var(--secondary);">${sign}</span>) <div style="font-size:0.85rem; color:var(--text-muted);">${formula}</div></div>`;
-                    }
-                }
-                    renderSettingsSummary();
-            }
-            renderCharacterSetupForm();
-        } catch (e) { /* ignore */ }
-    }
 
-        function renderSettingsSummary() {
-            const summary = document.getElementById('settings-character-summary');
-            if (!summary || !character) return;
-            const st = character.getState();
-            const map = {
-                str: '力量 (STR)',
-                dex: '敏捷 (DEX)',
-                con: '體質 (CON)',
-                int: '智力 (INT)',
-                wis: '感知 (WIS)',
-                cha: '魅力 (CHA)'
-            };
-            const bonuses = (st.background && st.background.bonuses) ? st.background.bonuses : {};
-            let abilitiesHtml = '';
-            for (const k of ['str','dex','con','int','wis','cha']) {
-                const base = character._baseAbilities?.[k] ?? st.abilities?.[k] ?? 0;
-                const bonus = Number(bonuses?.[k] || 0);
-                const total = Number(st.abilities?.[k] ?? base) ;
-                const displayTotal = total;
-                const mod = character.abilityModifier?.(displayTotal) ?? Math.floor((displayTotal-10)/2);
-                const sign = mod >= 0 ? '+'+mod : mod;
-                const bonusHtml = bonus ? `<span style="color:var(--success); margin-left:6px;">+${bonus}</span>` : '';
-                const formula = character.abilityFormula?.(displayTotal) ?? `${displayTotal} → ${sign}`;
-                abilitiesHtml += `<div style="margin-bottom:6px;"><strong>${map[k]}:</strong> ${displayTotal} ${bonusHtml} (<span style="color:var(--secondary);">${sign}</span>) <div style="font-size:0.85rem; color:var(--text-muted);">${formula}</div></div>`;
-            }
-            const bgLine = st.background && st.background.name ? `<div style="margin-bottom:8px;"><strong>背景：</strong>${st.background.name} ${st.background.bonuses ? JSON.stringify(st.background.bonuses) : ''}</div>` : '';
-            summary.innerHTML = `姓名: ${st.name || '--'}<br>等級: ${st.level ?? '--'}<br>生命: ${st.currentHp}/${st.maxHp}<br>AC: ${st.ac}<br>長弓命中: ${st.longbowHit >= 0 ? '+'+st.longbowHit : st.longbowHit}` + (bgLine ? `<br>${bgLine}<hr style="border:none;border-top:1px solid rgba(255,255,255,0.04);margin:8px 0;">` : '<hr style="border:none;border-top:1px solid rgba(255,255,255,0.04);margin:8px 0;">') + abilitiesHtml;
-            // set selector to current background if present
-            try {
-                const sel = document.getElementById('settings-background-select');
-                if (sel) {
-                    const bgName = st.background && st.background.name ? String(st.background.name) : '';
-                    let matched = false;
-                    if (bgName) {
-                        const lowered = bgName.toLowerCase();
-                        for (const opt of Array.from(sel.options)) {
-                            const val = (opt.value || '').toString().toLowerCase();
-                            const txt = (opt.textContent || '').toString().toLowerCase();
-                            if (val && val === lowered) { sel.value = opt.value; matched = true; break; }
-                            if (txt && txt.includes(lowered)) { sel.value = opt.value; matched = true; break; }
-                            if (lowered.includes(val) && val.length > 0) { sel.value = opt.value; matched = true; break; }
-                        }
-                    }
-                    if (!matched) sel.value = '';
-                }
-            } catch (e) { }
-        }
+    const settingsController = initializeCharacterSettings({
+        getCharacter: () => character,
+        getBattleApp: () => battleApp,
+        importCharacterFile: (file) => window.importCharacterFile(file),
+        appendLog: (html) => window.appendLog?.(html)
+    });
 
-    function closeSettingsPopup(event) {
-        const overlay = document.getElementById('settings-overlay');
-        if (event && event.target !== overlay) {
-            // ignore clicks that are not the backdrop
-            return;
-        }
-        if (!overlay) return;
-        overlay.classList.add('hidden');
-        try { overlay.style.display = 'none'; } catch (e) {}
-    }
+    window.openSettingsPopup = settingsController.openSettingsPopup;
+    window.closeSettingsPopup = settingsController.closeSettingsPopup;
+    window.applyCharacterSetupFromForm = settingsController.applyCharacterSetupFromForm;
+    window.resetCharacterSetupForm = settingsController.resetCharacterSetupForm;
+    window.renderSettingsSummary = settingsController.renderSettingsSummary;
+    window.renderCharacterSetupForm = settingsController.renderCharacterSetupForm;
+    window.markResourceTracker = settingsController.markResourceTracker;
 
-    function renderDerivedStatsText() {
-        if (!character) return;
-        const st = character.getState();
-        const longbowEl = document.getElementById('summary-longbow-hit');
-        const acEl = document.getElementById('summary-ac');
-        const maxHpEl = document.getElementById('summary-max-hp');
-        const hpMaxLabelEl = document.getElementById('hp-max-label');
-        const maxHpDisplayEl = document.getElementById('max-hp-display');
-        const acDisplayEl = document.getElementById('stat-ac');
-        if (longbowEl) longbowEl.textContent = `${st.longbowHit >= 0 ? '+' : ''}${st.longbowHit ?? '--'}`;
-        if (acEl) acEl.textContent = st.ac ?? '--';
-        if (maxHpEl) maxHpEl.textContent = st.maxHp ?? '--';
-        if (hpMaxLabelEl) hpMaxLabelEl.textContent = st.maxHp ?? '--';
-        if (maxHpDisplayEl) maxHpDisplayEl.textContent = st.maxHp ?? '--';
-        if (acDisplayEl) acDisplayEl.textContent = st.ac ?? '--';
-    }
-
-    function renderCharPanelSummary() {
-        const container = document.getElementById('char-panel-stats');
-        if (!container || !character) return;
-        const st = character.getState();
-        const abilities = st.abilities || {};
-        const name = st.name || '--';
-        const level = st.level ?? '--';
-        const currHp = st.currentHp ?? '--';
-        const maxHp = st.maxHp ?? '--';
-        const ac = st.ac ?? '--';
-        const longbow = (st.longbowHit >= 0) ? `+${st.longbowHit}` : (st.longbowHit ?? '--');
-        const abMap = { str: 'STR', dex: 'DEX', con: 'CON', int: 'INT', wis: 'WIS', cha: 'CHA' };
-
-        // compute formulas for tooltips
-        const conScore = Number(st.abilities?.con ?? character._baseAbilities?.con ?? 10);
-        const conMod = character.abilityModifier?.(conScore) ?? Math.floor((conScore - 10) / 2);
-        const hpFormula = `${10} + (${conMod}) + ${Math.max(0, level - 1)} * (${6} + ${conMod}) = ${maxHp}`;
-        const dexScore = Number(st.abilities?.dex ?? character._baseAbilities?.dex ?? 10);
-        const dexMod = character.abilityModifier?.(dexScore) ?? Math.floor((dexScore - 10) / 2);
-        const acFormula = `14 + (${dexMod}) + 2 = ${ac}`;
-        const prof = character.getProficiencyBonus?.(level) ?? character.getProficiencyBonus(level);
-        const longbowFormula = `${prof} (熟練) + (${dexMod}) + 5 = ${longbow}`;
-
-        let html = '';
-        html += `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
-            <div style="font-weight:700; font-size:1rem; color:var(--text-main);">${name} <span style="font-weight:500; color:var(--text-muted); font-size:0.9rem;">(Lv ${level})</span></div>
-            <div style="text-align:right; font-size:0.9rem; color:var(--text-muted);">
-                HP: <strong class="keyword" data-tooltip="${hpFormula}" style="color:var(--success);">${currHp}/${maxHp}</strong>
-                <div style="margin-top:4px;">AC: <strong class="keyword" data-tooltip="${acFormula}" style="color:var(--primary);">${ac}</strong> · 長弓: <strong class="keyword" data-tooltip="${longbowFormula}" style="color:var(--secondary);">${longbow}</strong></div>
-            </div>
-        </div>`;
-
-        html += `<div style="display:flex; gap:8px; flex-wrap:wrap;">`;
-        for (const k of ['str','dex','con','int','wis','cha']) {
-            const sc = Number(abilities[k] ?? 0);
-            const mod = character.abilityModifier?.(sc) ?? Math.floor((sc-10)/2);
-            const sign = (mod >= 0) ? `+${mod}` : `${mod}`;
-            const formulaText = (typeof character.abilityFormula === 'function') ? character.abilityFormula(sc) : `${sc} → ${sign}`;
-            html += `<div class="keyword" data-tooltip="${formulaText}" style="background:var(--bg-card); border:1px solid var(--border-color); padding:6px 8px; border-radius:8px; min-width:72px; text-align:center; font-weight:700;">
-                <div style="font-size:0.85rem; color:var(--text-muted);">${abMap[k]}</div>
-                <div style="font-size:1rem; margin-top:4px;">${sc} <span style="color:var(--secondary); font-weight:600;">${sign}</span></div>
-            </div>`;
-        }
-        html += `</div>`;
-
-        container.innerHTML = html;
-        try { initializeKeywordTooltips(); } catch (e) { /* ignore */ }
-        // update individual stat elements if present
-        try {
-            const statLong = document.getElementById('stat-longbow'); if (statLong) statLong.textContent = (st.longbowHit >= 0 ? '+'+st.longbowHit : st.longbowHit);
-            const statAc = document.getElementById('stat-ac'); if (statAc) statAc.textContent = String(st.ac);
-            const currHp = document.getElementById('curr-hp'); if (currHp) currHp.textContent = String(st.currentHp);
-        } catch (e) {}
-    }
-
-    renderDerivedStatsText();
-    window.openSettingsPopup = openSettingsPopup;
-    window.closeSettingsPopup = closeSettingsPopup;
-    window.applyCharacterSetupFromForm = applyCharacterSetupFromForm;
-    window.resetCharacterSetupForm = resetCharacterSetupForm;
-    window.renderSettingsSummary = renderSettingsSummary;
-    window.renderCharacterSetupForm = renderCharacterSetupForm;
-    // background helpers
     window.applyBackground = (name, bonuses) => character.applyBackground?.(name, bonuses);
     window.fetchBackgroundBonuses = async (name) => character.fetchBackgroundBonusesFromSite ? await character.fetchBackgroundBonusesFromSite(name) : null;
     window.applyBackgroundByName = async (name) => {
@@ -358,62 +367,25 @@ window.addEventListener('DOMContentLoaded', () => {
         if (character.applyBackgroundByName) return await character.applyBackgroundByName(name);
         return null;
     };
-    // setup import dropzone (drag & drop support)
-    try {
-        const dz = document.getElementById('import-dropzone');
-        const fileInput = document.getElementById('settings-char-import-file');
-        if (dz) {
-            dz.addEventListener('dragover', (ev) => { ev.preventDefault(); dz.classList.add('drag-over'); });
-            dz.addEventListener('dragleave', () => { dz.classList.remove('drag-over'); });
-            dz.addEventListener('drop', (ev) => {
-                ev.preventDefault(); dz.classList.remove('drag-over');
-                const file = ev.dataTransfer?.files?.[0];
-                if (file) {
-                    importCharacterFile(file).then(() => {
-                        const overlay = document.getElementById('settings-overlay');
-                        if (overlay) { overlay.classList.add('hidden'); overlay.style.display='none'; }
-                    }).catch(err => alert('匯入失敗：' + (err.message || err)));
-                }
-            });
-        }
-        if (fileInput) {
-            fileInput.addEventListener('change', (ev) => {
-                const f = ev.target.files?.[0];
-                if (f) {
-                    // keep file, user presses 匯入 to trigger
-                }
-            });
-        }
-    } catch (e) { /* ignore */ }
-    // keep battle view in sync when character changes
-    character.onChange((state) => {
-        if (battleApp && battleApp.model && battleApp.view) {
-            battleApp.model.state.maxHp = state.maxHp;
-            battleApp.model.state.currentHp = state.currentHp;
-            battleApp.model.state.ac = state.ac;
-            battleApp.model.state.longbowHit = state.longbowHit;
-            battleApp.view.render(battleApp.model.getSnapshot());
-        }
-        // if the settings popup is open, re-render the summary so background/abilities update live
-        try {
-            const overlay = document.getElementById('settings-overlay');
-            if (overlay && !overlay.classList.contains('hidden')) {
-                renderSettingsSummary();
-                renderCharacterSetupForm();
-            }
-        } catch (e) {}
-        try { renderDerivedStatsText(); } catch (e) {}
-        try { renderCharPanelSummary(); } catch (e) {}
-    });
+
+    settingsController.attachImportDropzone();
+    settingsController.bindCharacterChange();
+    attachPageFlipTouchHandlers();
+    attachPageScrollHandlers();
     exposeManualHelpers();
-    document.addEventListener('click', handleTrackedButtonClick);
-    window.renderSettingsSummary = renderSettingsSummary;
-    window.renderCharacterSetupForm = renderCharacterSetupForm;
-    window.applyCharacterSetupFromForm = applyCharacterSetupFromForm;
-    window.resetCharacterSetupForm = resetCharacterSetupForm;
+    initializeFiveEDataLookup();
+    document.addEventListener('click', (event) => {
+        settingsController.handleTrackedButtonClick(event);
+        settingsController.handleTrackerRestButtonClick(event);
+    });
+    document.addEventListener('change', (event) => settingsController.handleTrackerCheckboxChange(event));
+
     initializeManualButtons();
     initializeKeywordTooltips();
     initializePopupInteractionHandlers();
-    // initial render for char panel
-    try { renderCharPanelSummary(); } catch (e) {}
+
+    settingsController.renderDerivedStatsText();
+    settingsController.renderCharPanelSummary();
+    settingsController.renderCharacterSetupForm();
+        })();
 });
