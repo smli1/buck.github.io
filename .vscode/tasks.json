@@ -1,0 +1,44 @@
+{
+  // Tasks used by launch.json to serve the static site while debugging.
+  // Docs: https://code.visualstudio.com/docs/editor/tasks
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // Background static file server on port 8080. The background
+      // problemMatcher tells VS Code when the server is ready so the
+      // Chrome/Edge launch config can start.
+      "label": "serve",
+      "type": "shell",
+      "command": "python3 -m http.server 8080",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^.*$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Serving HTTP on .* port 8080.*"
+        }
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
+      }
+    },
+    {
+      // Stops the background server after a debug session ends.
+      "label": "stop-serve",
+      "type": "shell",
+      "command": "pkill -f 'http.server 8080' || true",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
