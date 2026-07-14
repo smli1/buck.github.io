@@ -1,0 +1,52 @@
+{
+  // Debug configurations for buck.github.io.
+  // Docs: https://code.visualstudio.com/docs/editor/debugging
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Debug the site in Chrome. The app uses ES modules and fetches
+      // /5e_data/*.json with absolute paths, so it must be served over HTTP
+      // (opening index.html as a file:// URL will not work). The preLaunchTask
+      // starts a static server on port 8080 before Chrome launches.
+      "name": "Launch site in Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:8080/index.html",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "serve",
+      "postDebugTask": "stop-serve"
+    },
+    {
+      // Same as above but for Microsoft Edge.
+      "name": "Launch site in Edge",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://localhost:8080/index.html",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "serve",
+      "postDebugTask": "stop-serve"
+    },
+    {
+      // Debug the Node.js test suite (node:test / *.test.mjs) with breakpoints.
+      "name": "Debug tests (node --test)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--test", "${workspaceFolder}/*.test.mjs"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      // Debug the single test file that is currently open in the editor.
+      "name": "Debug current test file",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--test", "${file}"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

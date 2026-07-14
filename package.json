@@ -1,0 +1,8 @@
+{
+  "name": "buck-github-io",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test *.test.mjs"
+  }
+}
