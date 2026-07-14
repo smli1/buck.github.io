@@ -4,6 +4,7 @@ export class Character {
             id: data.id ?? 'player-1',
             name: data.name ?? '巴克',
             level: Number.isFinite(data.level) ? data.level : 9,
+            dataSource: data.dataSource ?? data.source ?? null,
             maxHp: Number.isFinite(data.maxHp) ? data.maxHp : null,
             // allow saving/loading of static values as overrides (persisted in JSON)
             maxHpOverride: Number.isFinite(data.maxHpOverride) ? Number(data.maxHpOverride) : null,
@@ -12,6 +13,14 @@ export class Character {
             acOverride: Number.isFinite(data.acOverride) ? Number(data.acOverride) : null,
             longbowHit: Number.isFinite(data.longbowHit) ? data.longbowHit : null,
             longbowHitOverride: Number.isFinite(data.longbowHitOverride) ? Number(data.longbowHitOverride) : null,
+            gold: Number.isFinite(Number(data.gold)) ? Number(data.gold) : 0,
+            inventory: (() => {
+                const inventory = data.inventory && typeof data.inventory === 'object' ? { ...data.inventory } : {};
+                const goldValue = Number.isFinite(Number(data.gold)) ? Number(data.gold) : Number.isFinite(Number(inventory.gold)) ? Number(inventory.gold) : 0;
+                inventory.gold = Number.isFinite(Number(inventory.gold)) ? Number(inventory.gold) : goldValue;
+                inventory.notes = inventory.notes ?? '';
+                return inventory;
+            })(),
             // style skills: 'defense' (adds to AC) and 'archery' (adds to longbow hit)
             styles: data.styles ?? { defense: Boolean(data?.styles?.defense), archery: Boolean(data?.styles?.archery) },
             // equipped armor (object): { name: 'Leather', ac: 11, dexCap: null }
@@ -292,7 +301,35 @@ export class Character {
     }
 
     set(key, value) {
-        if (!(key in this.data) && !['ac','maxHp','longbowHit'].includes(key)) return false;
+        if (key === 'dataSource') {
+            this.data.dataSource = value ?? null;
+            this._emitChange();
+            return true;
+        }
+        if (key === 'gold') {
+            const parsedGold = Number.isFinite(Number(value)) ? Number(value) : 0;
+            this.data.gold = Math.max(0, parsedGold);
+            this.data.inventory = {
+                ...(this.data.inventory || {}),
+                gold: this.data.gold,
+                notes: this.data.inventory?.notes ?? ''
+            };
+            this._emitChange();
+            return true;
+        }
+        if (key === 'inventory') {
+            const inventoryValue = value && typeof value === 'object' ? { ...value } : {};
+            const parsedGold = Number.isFinite(Number(inventoryValue.gold)) ? Number(inventoryValue.gold) : Number.isFinite(Number(this.data.gold)) ? Number(this.data.gold) : 0;
+            this.data.inventory = {
+                ...inventoryValue,
+                gold: Math.max(0, parsedGold),
+                notes: inventoryValue.notes ?? this.data.inventory?.notes ?? ''
+            };
+            this.data.gold = this.data.inventory.gold;
+            this._emitChange();
+            return true;
+        }
+        if (!(key in this.data) && !['ac','maxHp','longbowHit','inventory','gold'].includes(key)) return false;
         // allow setting static override values for ac/maxHp/longbowHit via `set` (persisted on save)
         if (['maxHp', 'ac', 'longbowHit'].includes(key)) {
             const overrideKey = `${key}Override`;
@@ -400,6 +437,7 @@ export class Character {
             name: this.data.name,
             level: this.data.level,
             currentHp: this.data.currentHp,
+            dataSource: this.data.dataSource,
             // persist current static values so exported JSON reflects what's shown
             maxHp: this.data.maxHp,
             maxHpOverride: this.data.maxHpOverride,
@@ -409,6 +447,8 @@ export class Character {
             longbowHitOverride: this.data.longbowHitOverride,
             armor: this.data.armor,
             styles: this.data.styles,
+            gold: this.data.gold,
+            inventory: { ...(this.data.inventory || {}) },
             resources: this.data.resources,
             abilities: { ...this._baseAbilities },
             background: this.data.background,
@@ -657,10 +697,20 @@ export class Character {
             reader.onload = () => {
                 try {
                     const obj = JSON.parse(String(reader.result));
+                    const beforeState = this.getState();
+                    const importedChanges = [];
+                    const applyIfChanged = (field, value, formatter = (v) => v) => {
+                        const prev = beforeState[field];
+                        const next = value;
+                        if (JSON.stringify(prev) !== JSON.stringify(next)) {
+                            importedChanges.push({ field, before: prev, after: next, format: formatter });
+                        }
+                    };
                     this.data = {
                         id: obj.id ?? this.data.id,
                         name: obj.name ?? this.data.name,
                         level: Number.isFinite(obj.level) ? obj.level : this.data.level,
+                        dataSource: obj.dataSource ?? obj.source ?? this.data.dataSource,
                         // store overrides when provided so static values are preserved
                         maxHp: Number.isFinite(obj.maxHp) ? Number(obj.maxHp) : null,
                         maxHpOverride: Number.isFinite(obj.maxHpOverride) ? Number(obj.maxHpOverride) : null,
@@ -671,16 +721,52 @@ export class Character {
                         armor: obj.armor ?? this.data.armor,
                         longbowHit: Number.isFinite(obj.longbowHit) ? Number(obj.longbowHit) : null,
                         longbowHitOverride: Number.isFinite(obj.longbowHitOverride) ? Number(obj.longbowHitOverride) : null,
+                        gold: Number.isFinite(Number(obj.gold)) ? Number(obj.gold) : (Number.isFinite(Number(obj.inventory?.gold)) ? Number(obj.inventory.gold) : this.data.gold),
+                        inventory: (() => {
+                            const inventory = obj.inventory && typeof obj.inventory === 'object' ? { ...obj.inventory } : {};
+                            const goldValue = Number.isFinite(Number(obj.gold)) ? Number(obj.gold) : Number.isFinite(Number(inventory.gold)) ? Number(inventory.gold) : this.data.gold;
+                            inventory.gold = Number.isFinite(Number(inventory.gold)) ? Number(inventory.gold) : goldValue;
+                            inventory.notes = inventory.notes ?? '';
+                            return inventory;
+                        })(),
                         resources: obj.resources ?? this.data.resources,
                         notes: obj.notes ?? this.data.notes,
                         feats: Array.isArray(obj.feats) ? obj.feats.slice() : (obj.feats ? [obj.feats] : (this.data.feats || [])),
                         abilities: obj.abilities ?? this.data.abilities,
                         background: obj.background ?? this.data.background
                     };
+                    applyIfChanged('name', this.data.name);
+                    applyIfChanged('level', this.data.level);
+                    applyIfChanged('currentHp', this.data.currentHp);
+                    applyIfChanged('maxHp', this.data.maxHp);
+                    applyIfChanged('ac', this.data.ac);
+                    applyIfChanged('longbowHit', this.data.longbowHit);
+                    applyIfChanged('styles', this.data.styles, (v) => JSON.stringify(v));
+                    applyIfChanged('armor', this.data.armor, (v) => JSON.stringify(v));
+                    applyIfChanged('gold', this.data.gold);
+                    applyIfChanged('inventory', this.data.inventory, (v) => JSON.stringify(v));
+                    applyIfChanged('resources', this.data.resources, (v) => JSON.stringify(v));
+                    applyIfChanged('notes', this.data.notes);
+                    applyIfChanged('feats', this.data.feats, (v) => JSON.stringify(v));
+                    applyIfChanged('abilities', this.data.abilities, (v) => JSON.stringify(v));
+                    applyIfChanged('background', this.data.background, (v) => JSON.stringify(v));
                     // reset base abilities to the provided abilities (assumed to be base scores)
                     this._baseAbilities = { ...this.data.abilities };
                     // rebuild effective abilities applying background and feat bonuses
                     this._rebuildAbilities();
+                    if (importedChanges.length && typeof window !== 'undefined' && typeof window.appendLog === 'function') {
+                        const lines = importedChanges.slice(0, 8).map(({ field, before, after, format }) => {
+                            const formatValue = (value) => {
+                                if (value === null || value === undefined) return 'null';
+                                if (typeof value === 'string') return value;
+                                if (typeof value === 'number') return String(value);
+                                return format ? format(value) : JSON.stringify(value);
+                            };
+                            return `<div>• ${field}: ${formatValue(before)} → ${formatValue(after)}</div>`;
+                        }).join('');
+                        const summary = importedChanges.length > 8 ? `<div>• ${importedChanges.length} 個欄位已更新</div>` : '';
+                        window.appendLog(`<span style="color:var(--secondary)">[角色] 已從檔案載入並更新：${lines}${summary}</span>`);
+                    }
                     resolve(true);
                 } catch (e) {
                     reject(e);

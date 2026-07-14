@@ -3,9 +3,66 @@
   "name": "巴克",
   "level": 9,
   "currentHp": 76,
+  "dataSource": null,
+  "maxHp": 76,
+  "maxHpOverride": null,
+  "ac": 18,
+  "acOverride": null,
+  "longbowHit": 11,
+  "longbowHitOverride": null,
+  "armor": null,
   "styles": {
     "defense": true,
     "archery": false
+  },
+  "gold": 200,
+  "inventory": {
+    "gold": 200,
+    "notes": "",
+    "items": [
+      {
+        "name": "新物品",
+        "quantity": 1,
+        "description": ""
+      },
+      {
+        "name": "新物品",
+        "quantity": 1,
+        "description": ""
+      },
+      {
+        "name": "新物品",
+        "quantity": 1,
+        "description": ""
+      },
+      {
+        "name": "新物品",
+        "quantity": 1,
+        "description": ""
+      },
+      {
+        "name": "新物品",
+        "quantity": 1,
+        "description": ""
+      },
+      {
+        "name": "新物品",
+        "quantity": 1,
+        "description": ""
+      },
+      {
+        "name": "新物品",
+        "quantity": 1,
+        "description": ""
+      }
+    ],
+    "quickAccessIndices": [
+      6,
+      3,
+      2,
+      1,
+      0
+    ]
   },
   "resources": {},
   "abilities": {
@@ -26,7 +83,6 @@
   "feats": [
     {
       "name": "Great Weapon Master",
-      "level": 4,
       "bonuses": {
         "dex": 1,
         "rangedDamage": 4
@@ -34,32 +90,23 @@
     },
     {
       "name": "Sharpshooter",
-      "level": 6,
       "bonuses": {
         "dex": 1
       }
     },
     {
       "name": "Mage Slayer",
-      "level": 8,
       "bonuses": {
         "dex": 1
-      },
-      "notes": "達滿值 +5 when reaching cap"
+      }
     },
     {
       "name": "Savage Attacker",
-      "notes": "1d8 ranged damage may be rerolled on 1-2; take higher",
-      "effects": {
-        "savageReroll": true
-      }
+      "bonuses": {}
     },
     {
       "name": "Lucky",
-      "notes": "Provides 4 luck points per day for rerolls/control",
-      "effects": {
-        "luckPoints": 4
-      }
+      "bonuses": {}
     }
   ]
 }

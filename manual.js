@@ -229,7 +229,21 @@ export function initializeManualButtons() {
 export function openManualPopup(type) {
     const overlay = document.getElementById('manual-popup-overlay');
     if (!overlay) return;
+    overlay.style.display = 'flex';
     overlay.classList.remove('hidden');
+    overlay.style.opacity = '0';
+    const popup = overlay.querySelector('.manual-popup');
+    if (popup) {
+        popup.style.opacity = '0';
+        popup.style.transform = 'translateY(10px)';
+    }
+    requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        if (popup) {
+            popup.style.opacity = '1';
+            popup.style.transform = 'translateY(0)';
+        }
+    });
     bringElementToFront(overlay);
     if (type) {
         setManualScenario(type);
@@ -247,7 +261,20 @@ export function closeManualPopup(event) {
     if (event && event.target !== document.getElementById('manual-popup-overlay')) {
         return;
     }
-    document.getElementById('manual-popup-overlay')?.classList.add('hidden');
+    const overlay = document.getElementById('manual-popup-overlay');
+    if (!overlay) return;
+    overlay.classList.add('hidden');
+    overlay.style.opacity = '0';
+    const popup = overlay.querySelector('.manual-popup');
+    if (popup) {
+        popup.style.opacity = '0';
+        popup.style.transform = 'translateY(10px)';
+    }
+    window.setTimeout(() => {
+        if (overlay.classList.contains('hidden')) {
+            overlay.style.display = 'none';
+        }
+    }, 220);
     if (currentManualField) {
         currentManualField.classList.remove('manual-selected');
         currentManualField = null;

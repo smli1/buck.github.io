@@ -13,81 +13,117 @@
         <section class="page-face front-face is-active">            
             
             <!-- Settings popup overlay -->
-            <div id="settings-overlay" class="manual-popup-overlay hidden" onclick="if(event.target===this){ this.classList.add('hidden'); this.style.display='none'; } if(typeof closeSettingsPopup==='function'){ closeSettingsPopup(event); }" style="position:fixed; inset:0; z-index:120;">
-                <div id="settings-popup" class="manual-popup settings-popup" style="background:#0b1220; color:#fff; padding:18px; border-radius:8px; width:640px; max-width:95%; box-shadow:0 8px 30px rgba(0,0,0,0.6);">
-                    <div class="manual-popup-header" style="align-items:center;">
+            <div id="settings-overlay" class="manual-popup-overlay hidden" onclick="if(event.target===this && typeof closeSettingsPopup==='function'){ closeSettingsPopup(event); }" style="position:fixed; inset:0; z-index:102;">
+                <div id="settings-popup" class="manual-popup settings-popup">
+                    <div class="manual-popup-header">
                         <span>設定</span>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <button class="btn btn-icon" onclick="(function(){const o=document.getElementById('settings-overlay'); if(o){ o.classList.add('hidden'); o.style.display='none'; }})();">✕</button>
+                        <div class="manual-popup-header-actions">
+                            <button class="btn btn-icon" onclick="(function(){ const o=document.getElementById('settings-overlay'); if(o && typeof closeSettingsPopup==='function'){ closeSettingsPopup({ target: o }); } })()">✕</button>
                         </div>
                     </div>
-                    <div class="manual-popup-body settings-body" style="grid-template-columns: 1fr 1fr;">
-                        <div style="display:flex; flex-direction:column; gap:12px;">
-                            <div style="font-weight:700; color:var(--secondary);">匯出 / 儲存</div>
-                            <div style="display:flex; gap:8px;">
-                                <button class="btn" type="button" style="flex:1;" onclick="exportCharacterToFile()">匯出角色 (下載)</button>
-                                <button class="btn" type="button" style="flex:1;" onclick="saveCharacter()">儲存到 LocalStorage</button>
-                            </div>
-                            <div style="font-size:0.9rem; color:var(--text-muted);">匯出可作為備份或在其他裝置匯入。儲存會覆寫瀏覽器的本地角色資料。</div>
-                            <div style="margin-top:6px;">
-                                <div style="font-weight:700; color:var(--secondary); margin-bottom:6px;">目前角色摘要</div>
-                                <div id="settings-character-summary" style="font-size:0.95rem; color:var(--text-main);">--</div>
-                                <div style="margin-top:12px; padding:10px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-card);">
-                                    <div style="font-weight:700; color:var(--secondary); margin-bottom:8px;">角色數值設定</div>
-                                    <div style="display:grid; gap:8px;">
-                                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">
-                                                角色名稱
-                                                <input id="settings-char-name" type="text" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" />
-                                            </label>
-                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">
-                                                等級
-                                                <input id="settings-char-level" type="number" min="1" max="20" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" />
-                                            </label>
+                    <div class="manual-popup-body settings-body">
+                        <div class="settings-tab-bar" role="tablist" aria-label="設定分頁">
+                            <button class="settings-tab-btn active" type="button" data-tab="character" onclick="switchSettingsTab('character')">角色資訊</button>
+                            <button class="settings-tab-btn" type="button" data-tab="import" onclick="switchSettingsTab('import')">匯入 / 匯出</button>
+                        </div>
+
+                        <div id="settings-tab-shell" class="settings-tab-shell">
+                            <div id="settings-character-tab" class="settings-tab-panel active">
+                            <section class="settings-section">
+                                <div class="manual-popup-section-title">目前角色摘要</div>
+                                <div id="settings-character-summary" class="settings-summary-box">--</div>
+                            </section>
+
+                            <section class="settings-section">
+                                <div class="manual-popup-section-title">角色數值設定</div>
+                                <div class="settings-form-grid">
+                                    <label class="settings-field">
+                                        <span>角色名稱</span>
+                                        <input id="settings-char-name" class="settings-input" type="text" />
+                                    </label>
+                                    <label class="settings-field">
+                                        <span>等級</span>
+                                        <input id="settings-char-level" class="settings-input" type="number" min="1" max="20" />
+                                    </label>
+                                </div>
+                                <div class="settings-ability-grid">
+                                    <label class="settings-field compact">STR<input id="settings-ability-str" class="settings-input" type="number" min="1" max="30" /></label>
+                                    <label class="settings-field compact">DEX<input id="settings-ability-dex" class="settings-input" type="number" min="1" max="30" /></label>
+                                    <label class="settings-field compact">CON<input id="settings-ability-con" class="settings-input" type="number" min="1" max="30" /></label>
+                                    <label class="settings-field compact">INT<input id="settings-ability-int" class="settings-input" type="number" min="1" max="30" /></label>
+                                    <label class="settings-field compact">WIS<input id="settings-ability-wis" class="settings-input" type="number" min="1" max="30" /></label>
+                                    <label class="settings-field compact">CHA<input id="settings-ability-cha" class="settings-input" type="number" min="1" max="30" /></label>
+                                </div>
+                                <div class="settings-actions-row align-right">
+                                    <button class="btn" type="button" onclick="applyCharacterSetupFromForm()">套用數值</button>
+                                    <button class="btn" type="button" onclick="resetCharacterSetupForm()">重置</button>
+                                </div>
+                            </section>
+
+                            <section class="settings-section">
+                                <div class="manual-popup-section-title">背景與資料來源</div>
+                                <div class="settings-form-grid">
+                                    <label class="settings-field wide">
+                                        <span>背景</span>
+                                        <div class="settings-inline-row">
+                                            <select id="settings-background-select" class="settings-select">
+                                                <option value="">-- 選擇背景 --</option>
+                                                <option value="Soldier">Soldier / 士兵</option>
+                                                <option value="Criminal">Criminal / 罪犯</option>
+                                                <option value="Acolyte">Acolyte / 祭司學徒</option>
+                                            </select>
+                                            <button class="btn" type="button" onclick="(async function(){ const s=document.getElementById('settings-background-select'); if(!s) return; const name=s.value; if(!name) return alert('請選擇背景'); const res = await applyBackgroundByName(name); if(!res) alert('找不到背景加成'); else renderSettingsSummary(); })()">套用</button>
                                         </div>
-                                        <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:8px;">
-                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">STR<input id="settings-ability-str" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">DEX<input id="settings-ability-dex" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">CON<input id="settings-ability-con" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">INT<input id="settings-ability-int" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">WIS<input id="settings-ability-wis" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                            <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9rem; color:var(--text-muted);">CHA<input id="settings-ability-cha" type="number" min="1" max="30" style="padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);" /></label>
-                                        </div>
-                                        <div style="display:flex; gap:8px; justify-content:flex-end;">
-                                            <button class="btn" type="button" onclick="applyCharacterSetupFromForm()">套用數值</button>
-                                            <button class="btn" type="button" onclick="resetCharacterSetupForm()">重置</button>
+                                    </label>
+                                    <label class="settings-field wide">
+                                        <span>資料來源</span>
+                                        <select id="settings-data-source-select" class="settings-select">
+                                            <option value="">-- 選擇資料來源 --</option>
+                                            <option value="PHB">PHB - Player's Handbook (2014 core rules)</option>
+                                            <option value="XPHB">XPHB - Player's Handbook (2024 core rules)</option>
+                                            <option value="XGE">XGE - Xanathar's Guide to Everything</option>
+                                            <option value="TCE">TCE - Tasha's Cauldron of Everything</option>
+                                            <option value="FTD">FTD - Fizban's Treasury of Dragons</option>
+                                            <option value="EGW">EGW - Explorer's Guide to Wildemount</option>
+                                            <option value="GGR">GGR - Guildmasters' Guide to Ravnica</option>
+                                            <option value="IDRotF">IDRotF - Icewind Dale: Rime of the Frostmaiden</option>
+                                            <option value="AAG">AAG - Astral Adventurer's Guide (Spelljammer)</option>
+                                            <option value="AI">AI - Acquisitions Incorporated</option>
+                                            <option value="BMT">BMT - Book of Many Things</option>
+                                            <option value="SCC">SCC - Strixhaven: A Curriculum of Chaos</option>
+                                            <option value="SatO">SatO - Sigil and the Outlands (Planescape)</option>
+                                            <option value="LLK">LLK - Lost Laboratory of Kwalish</option>
+                                            <option value="EFA">EFA - Eberron: From the Ashes</option>
+                                            <option value="FRHoF">FRHoF - Fizban's / Forgotten Realms related supplements</option>
+                                            <option value="AitFR-AVT">AitFR-AVT - Adventure in the Forgotten Realms / module variants</option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </section>
+                        </div>
+
+                            <div id="settings-import-tab" class="settings-tab-panel">
+                                <section class="settings-section">
+                                    <div class="manual-popup-section-title">匯出 / 儲存</div>
+                                    <div class="settings-actions-row">
+                                        <button class="btn btn-block" type="button" onclick="exportCharacterToFile()">匯出角色 (下載)</button>
+                                        <button class="btn btn-block" type="button" onclick="saveCharacter()">儲存到 LocalStorage</button>
+                                    </div>
+                                    <div class="settings-help">匯出可作為備份或在其他裝置匯入。儲存會覆寫瀏覽器的本地角色資料。</div>
+                                </section>
+                                <section class="settings-section">
+                                    <div class="manual-popup-section-title">匯入角色</div>
+                                    <div id="import-dropzone" class="import-dropzone">
+                                        <div class="settings-help">將 JSON 檔拖曳到此處，或使用下方選擇檔案匯入。</div>
+                                        <input class="settings-input-file" type="file" id="settings-char-import-file" accept="application/json,.json" />
+                                        <div class="settings-actions-row">
+                                            <button class="btn" type="button" onclick="(function(){ const el=document.getElementById('settings-char-import-file'); if(el && el.files && el.files[0]) { importCharacterFile(el.files[0]).then(()=>{ const o=document.getElementById('settings-overlay'); if(o){ o.classList.add('hidden'); const p=o.querySelector('.manual-popup'); if(p){ p.style.opacity='0'; p.style.transform='translateY(10px)'; } window.setTimeout(()=>{ if(o.classList.contains('hidden')) o.style.display='none'; },220); } }).catch(e=>alert('匯入失敗：'+(e.message||e))); } else alert('請先選擇一個 JSON 檔'); })()">匯入</button>
+                                            <button class="btn" type="button" onclick="(function(){ const el=document.getElementById('settings-char-import-file'); el.value=''; })()">清除選擇</button>
                                         </div>
                                     </div>
-                                </div>
-                                <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
-                                    <label style="font-weight:700; color:var(--secondary);">背景：</label>
-                                    <select id="settings-background-select" style="flex:1; padding:6px; border-radius:6px; background:var(--bg-inner); border:1px solid var(--border-color); color:var(--text-main);">
-                                        <option value="">-- 選擇背景 --</option>
-                                        <option value="Soldier">Soldier / 士兵</option>
-                                        <option value="Criminal">Criminal / 罪犯</option>
-                                        <option value="Acolyte">Acolyte / 祭司學徒</option>
-                                    </select>
-                                    <button class="btn" type="button" style="min-width:88px;" onclick="(async function(){ const s=document.getElementById('settings-background-select'); if(!s) return; const name=s.value; if(!name) return alert('請選擇背景'); const res = await applyBackgroundByName(name); if(!res) alert('找不到背景加成'); else renderSettingsSummary(); })()">套用</button>
-                                </div>
+                                    <div class="settings-help">匯入會覆寫目前角色數值。請先備份或儲存。</div>
+                                </section>
                             </div>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:12px;">
-                            <div style="font-weight:700; color:var(--secondary);">匯入角色</div>
-                            <div id="import-dropzone" class="import-dropzone" style="padding:12px; border:1px dashed var(--border-color); border-radius:8px; background:var(--bg-card);">
-                                <div style="margin-bottom:8px; color:var(--text-muted);">將 JSON 檔拖曳到此處，或使用下方選擇檔案匯入。</div>
-                                <input type="file" id="settings-char-import-file" accept="application/json,.json" />
-                                <div style="display:flex; gap:8px; margin-top:8px;">
-                                    <button class="btn" type="button" onclick="(function(){ const el=document.getElementById('settings-char-import-file'); if(el && el.files && el.files[0]) { importCharacterFile(el.files[0]).then(()=>{ document.getElementById('settings-overlay').classList.add('hidden'); document.getElementById('settings-overlay').style.display='none'; }).catch(e=>alert('匯入失敗：'+(e.message||e))); } else alert('請先選擇一個 JSON 檔'); })()">匯入</button>
-                                    <button class="btn" type="button" onclick="(function(){ const el=document.getElementById('settings-char-import-file'); el.value=''; })()">清除選擇</button>
-                                </div>
-                            </div>
-                            <div style="font-size:0.9rem; color:var(--text-muted);">匯入會覆寫目前角色數值。請先備份或儲存。</div>
-                            <!-- <div style="margin-top:12px; padding:10px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-card);">
-                                <div style="font-weight:700; color:var(--secondary); margin-bottom:8px;">5e 角色資料生成</div>
-                                <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:8px;">依照目前角色與 5e_data 自動整理背景、職業、專長、戰鬥風格與資源建議。</div>
-                                <button id="fivee-generate-btn" class="btn" type="button">生成 5e 詳細資料</button>
-                                <div id="fivee-generated-details" style="margin-top:8px; display:flex; flex-direction:column; gap:8px; max-height:320px; overflow:auto;"></div>
-                            </div> -->
                         </div>
                     </div>
                 </div>
@@ -97,6 +133,7 @@
                 <h1 style="margin:0;">⚔️ 巴克 Battle Control Panel</h1>
                 <div class="header-actions">
                     <button class="btn-icon" type="button" data-page-toggle="true" onclick="togglePageFlip()" aria-label="Switch page" title="切換頁面">🎭 Role-Playing</button>
+                    <button id="inventory-cog" class="btn-icon" onclick="openInventoryPopup()" aria-label="Inventory" title="背包">🎒</button>
                     <button id="settings-cog" class="btn-icon" onclick="openSettingsPopup()" aria-label="Settings" title="設定">⚙️</button>
                 </div>
             </header>
@@ -234,7 +271,7 @@
             </div>
 
             <!-- 🔋 大招資源追蹤 -->
-            <div class="card" style="flex: 1;">
+            <div class="card">
                 <!-- <p class="tooltip-note">將游標移到數值前詞彙，可查看其來源與計算方式。</p> -->
                 <span class="stat-label" style="font-size:0.9rem; color:#fff; font-weight:700; margin-bottom:8px;">🔋 核心資源追蹤</span>
                 <div class="tracker-row" data-resource="secondwind">
@@ -249,7 +286,7 @@
                     </div>
                 </div>
                 <div class="tracker-row" data-resource="lucky">
-                    <span>🍀 <span class="keyword" data-tooltip="Lucky：每日 4 次幸運點，可用於重新擲一個 d20 或使敵方攻擊重擲。">Lucky</span>：每日 4 點幸運點，提供擲骰控制。</li></span>
+                    <span>🍀 <span class="keyword" data-tooltip="Lucky：每日 4 次幸運點，可用於重新擲一個 d20 或使敵方攻擊重擲。">Lucky</span> (長休 4 次)</li></span>
                     <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <div class="checkbox-group">
                             <input type="checkbox" class="tracker-checkbox">
@@ -277,6 +314,7 @@
                         <input type="checkbox" class="tracker-checkbox" data-resource-group="unyielding">
                     </div>
                 </div>
+                
                 <div style="margin:12px 0; border-color:var(--border-color);"></div>
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
                     <button class="btn" type="button" data-rest-mode="short" style="padding:4px 8px; font-size:0.8rem;">短休</button>
@@ -284,7 +322,44 @@
                 </div>
                 <!-- settings popup is available via the cog button in the header -->
             </div>
+<div class="quick-item-access-panel">
+                    <div class="manual-popup-section-title">快速物品存取</div>
+                    <div id="quick-item-access-list" class="quick-item-access-list"></div>
+                </div>
+        </div>
 
+        <div id="inventory-overlay" class="manual-popup-overlay hidden" onclick="if(event.target===this && typeof closeInventoryPopup==='function'){ closeInventoryPopup(event); }" style="position:fixed; inset:0; z-index:160;">
+            <div id="inventory-popup" class="manual-popup settings-popup" style="width:min(92%,620px);">
+                <div class="manual-popup-header">
+                    <span>背包 / 金幣</span>
+                    <div class="manual-popup-header-actions">
+                        <button class="btn btn-icon" onclick="(function(){ const o=document.getElementById('inventory-overlay'); if(o && typeof closeInventoryPopup==='function'){ closeInventoryPopup({ target: o }); } })()">✕</button>
+                    </div>
+                </div>
+                <div class="manual-popup-body">
+                    <section class="settings-section">
+                        <div class="manual-popup-section-title">金幣</div>
+                        <label class="settings-field">
+                            <span>當前金幣</span>
+                            <input id="inventory-gold-input" class="settings-input" type="number" min="0" step="1" />
+                        </label>
+                    </section>
+                    <section class="settings-section">
+                        <div class="manual-popup-section-title" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                            <span>物品與備註</span>
+                            <button id="inventory-delete-mode-btn" class="btn btn-icon" type="button" title="刪除模式" onclick="toggleInventoryDeleteMode()">🗑️</button>
+                        </div>
+                        <div class="inventory-list" id="inventory-list"></div>
+                        <div class="settings-actions-row" style="margin-top:8px;">
+                            <button class="btn" type="button" onclick="addInventoryItem()">＋ 新增物品</button>
+                        </div>
+                        <label class="settings-field" style="margin-top:10px;">
+                            <span>備註</span>
+                            <textarea id="inventory-notes-input" class="settings-input" rows="3" style="resize:vertical;"></textarea>
+                        </label>
+                    </section>
+                </div>
+            </div>
         </div>
 
         <!-- ➡️ 右側欄位：回合步驟與即時日誌 -->
@@ -425,7 +500,7 @@
 
     <div id="tooltip-popup" class="tooltip-popup" aria-hidden="true"></div>
     <div id="manual-popup-overlay" class="manual-popup-overlay hidden" onclick="closeManualPopup(event)">
-        <div class="manual-popup" onclick="event.stopPropagation()">
+        <div class="manual-popup manual-popup--nested" onclick="event.stopPropagation()">
             <div class="manual-popup-header">
                 <span>手動骰子輸入</span>
                 <!-- <button class="btn btn-phrase" style="padding: 6px 10px; font-size:0.9rem;" onclick="closeManualPopup()">關閉</button> -->

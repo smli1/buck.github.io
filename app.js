@@ -22,8 +22,26 @@ import {
 import { initializePopupInteractionHandlers } from './utils.js';
 import { initializeCharacterSettings } from './character-settings.js';
 import { createFiveEDataStore, exposeFiveEDataStoreToWindow } from './fivee-data.js';
+import { createPopupManager } from './popup-manager.js';
 
 let character = null;
+
+function resolveDataUrl(filename) {
+    return new URL(`./data/${filename}`, import.meta.url);
+}
+
+async function loadDefaultCharacterFromDataFile() {
+    try {
+        const res = await fetch(resolveDataUrl('character.player-1.json'), { cache: 'no-store' });
+        if (res && res.ok) {
+            const obj = await res.json();
+            return obj && typeof obj === 'object' ? new Character(obj) : null;
+        }
+    } catch (e) {
+        // ignore fetch errors and fall back to local storage / default constructor
+    }
+    return null;
+}
 
 function togglePageFlip(force) {
     const shell = document.getElementById('page-flip-shell');
@@ -160,8 +178,31 @@ function attachPageScrollHandlers() {
     });
 }
 
+function syncBattleAppFromCharacter(battleApp, activeCharacter) {
+    if (!battleApp?.model || !battleApp?.view || !activeCharacter) return;
+    const nextState = activeCharacter.getState();
+    battleApp.model.state.maxHp = nextState.maxHp;
+    battleApp.model.state.currentHp = nextState.currentHp;
+    battleApp.model.state.ac = nextState.ac;
+    battleApp.model.state.longbowHit = nextState.longbowHit;
+    battleApp.view.render(battleApp.model.getSnapshot());
+}
+
 function exposeBattleHelpers(viewModel) {
-    window.modHP = (amt) => viewModel.modHP(amt);
+    window.modHP = (amt) => {
+        const activeCharacter = window.character ?? null;
+        if (activeCharacter?.adjustHp) {
+            const before = Number(activeCharacter.getState?.().currentHp ?? activeCharacter.data?.currentHp ?? 0);
+            const result = activeCharacter.adjustHp(amt);
+            const after = Number(result?.after ?? activeCharacter.getState?.().currentHp ?? activeCharacter.data?.currentHp ?? before);
+            const changeText = amt > 0 ? `+${amt}` : `${amt}`;
+            const tone = amt >= 0 ? 'var(--success)' : 'var(--primary)';
+            viewModel?.log?.(`<span style='color:${tone}'>[HP 變更] ${changeText} → ${before} → ${after}</span>`);
+            syncBattleAppFromCharacter(viewModel, activeCharacter);
+            return result;
+        }
+        return viewModel?.modHP?.(amt);
+    };
     window.copyText = (txt) => viewModel.copyText(txt);
     window.appendLog = (html) => viewModel.appendLog(html);
     window.log = (msg) => viewModel.log(msg);
@@ -266,20 +307,9 @@ function initializeFiveEDataLookup() {
 
 window.addEventListener('DOMContentLoaded', () => {
     (async () => {
-        // Try to load a local JSON file at /data/character.player-1.json when served over HTTP.
-        // This allows editing a file in the project and having the app pick it up when running a local server.
-        let saved = null;
-        try {
-            if (location && (location.protocol === 'http:' || location.protocol === 'https:')) {
-                const res = await fetch('/data/character.player-1.json', { cache: 'no-store' });
-                if (res && res.ok) {
-                    const obj = await res.json();
-                    saved = new Character(obj);
-                }
-            }
-        } catch (e) {
-            // ignore fetch errors and fall back
-        }
+        // Prefer the bundled default character file first so the panel loads a known initial state.
+        // This also works on GitHub Pages because the URLs are resolved relative to the app module location.
+        let saved = await loadDefaultCharacterFromDataFile();
 
         window.DB = { feats: null, styles: null, skills: null, equipment: null };
         const fiveEDataStore = createFiveEDataStore();
@@ -298,9 +328,9 @@ window.addEventListener('DOMContentLoaded', () => {
         };
         try {
             const [featsRes, stylesRes, equipRes] = await Promise.allSettled([
-                fetch('/data/feats.json', { cache: 'no-store' }),
-                fetch('/data/style.json', { cache: 'no-store' }),
-                fetch('/data/equipment.json', { cache: 'no-store' })
+                fetch(resolveDataUrl('feats.json'), { cache: 'no-store' }),
+                fetch(resolveDataUrl('style.json'), { cache: 'no-store' }),
+                fetch(resolveDataUrl('equipment.json'), { cache: 'no-store' })
             ]);
             const db = { feats: null, styles: null, skills: null, equipment: null };
             if (featsRes.status === 'fulfilled' && featsRes.value.ok) db.feats = await featsRes.value.json();
@@ -328,23 +358,32 @@ window.addEventListener('DOMContentLoaded', () => {
     window.character = character;
     window.togglePageFlip = togglePageFlip;
     window.setCharacter = (key, value) => character.set(key, value);
-    window.saveCharacter = () => character.save();
-    window.exportCharacterToFile = (filename) => character.exportToFile?.(filename);
+    const logCharacterAction = (message) => window.appendLog?.(`<span style="color:var(--secondary)">[角色] ${message}</span>`);
+    window.saveCharacter = () => {
+        const saved = character.save();
+        logCharacterAction(saved ? '已儲存角色資料' : '儲存角色資料失敗');
+        return saved;
+    };
+    window.exportCharacterToFile = (filename) => {
+        const exported = character.exportToFile?.(filename);
+        logCharacterAction(exported ? '已匯出角色檔案' : '匯出角色檔案失敗');
+        return exported;
+    };
     window.importCharacterFile = async (fileOrFileList) => {
         const file = fileOrFileList?.files ? fileOrFileList.files[0] : (fileOrFileList?.[0] || fileOrFileList);
-        if (!file) return Promise.reject(new Error('No file provided'));
-        await character.loadFromFile(file);
-        if (battleApp && battleApp.model && battleApp.view) {
-            const nextState = character.getState();
-            battleApp.model.state.maxHp = nextState.maxHp;
-            battleApp.model.state.currentHp = nextState.currentHp;
-            battleApp.model.state.ac = nextState.ac;
-            battleApp.model.state.longbowHit = nextState.longbowHit;
-            battleApp.view.render(battleApp.model.getSnapshot());
+        if (!file) {
+            logCharacterAction('匯入失敗：未提供檔案');
+            return Promise.reject(new Error('No file provided'));
         }
+        await character.loadFromFile(file);
+        syncBattleAppFromCharacter(battleApp, character);
+        try { settingsController?.renderTrackerResourcesFromCharacter?.(); } catch (e) { /* ignore */ }
+        try { settingsController?.setInventoryFormState?.(); } catch (e) { /* ignore */ }
+        logCharacterAction(`已載入角色檔案：${file.name || '未命名角色'}`);
         return true;
     };
 
+    window.__popupManager = createPopupManager();
     const settingsController = initializeCharacterSettings({
         getCharacter: () => character,
         getBattleApp: () => battleApp,
@@ -354,6 +393,33 @@ window.addEventListener('DOMContentLoaded', () => {
 
     window.openSettingsPopup = settingsController.openSettingsPopup;
     window.closeSettingsPopup = settingsController.closeSettingsPopup;
+    window.openInventoryPopup = settingsController.openInventoryPopup;
+    window.closeInventoryPopup = settingsController.closeInventoryPopup;
+    window.saveInventoryFromForm = settingsController.saveInventoryFromForm;
+    window.addInventoryItem = settingsController.addInventoryItem;
+    window.handleInventoryListClick = settingsController.handleInventoryListClick;
+    window.setInventoryFormState = settingsController.setInventoryFormState;
+    window.renderInventoryList = settingsController.renderInventoryList;
+    window.toggleInventoryDeleteMode = settingsController.toggleInventoryDeleteMode;
+
+    settingsController.setInventoryFormState();
+
+    window.switchSettingsTab = (tab) => {
+        const buttons = document.querySelectorAll('.settings-tab-btn');
+        const panels = document.querySelectorAll('.settings-tab-panel');
+        const targetPanelId = `settings-${tab === 'character' ? 'character' : 'import'}-tab`;
+        const shell = document.getElementById('settings-tab-shell');
+        const targetPanel = document.getElementById(targetPanelId);
+        const currentHeight = shell?.offsetHeight || 0;
+        buttons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tab));
+        panels.forEach((panel) => panel.classList.toggle('active', panel.id === targetPanelId));
+        if (shell && targetPanel) {
+            shell.style.height = `${currentHeight}px`;
+            requestAnimationFrame(() => {
+                shell.style.height = `${targetPanel.scrollHeight}px`;
+            });
+        }
+    };
     window.applyCharacterSetupFromForm = settingsController.applyCharacterSetupFromForm;
     window.resetCharacterSetupForm = settingsController.resetCharacterSetupForm;
     window.renderSettingsSummary = settingsController.renderSettingsSummary;
@@ -377,8 +443,16 @@ window.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (event) => {
         settingsController.handleTrackedButtonClick(event);
         settingsController.handleTrackerRestButtonClick(event);
+        if (event.target.closest('#inventory-list')) {
+            settingsController.handleInventoryListClick(event);
+        }
     });
-    document.addEventListener('change', (event) => settingsController.handleTrackerCheckboxChange(event));
+    document.addEventListener('change', (event) => {
+        settingsController.handleTrackerCheckboxChange(event);
+        if (event.target.closest('#inventory-list')) {
+            settingsController.handleInventoryListChange(event);
+        }
+    });
 
     initializeManualButtons();
     initializeKeywordTooltips();

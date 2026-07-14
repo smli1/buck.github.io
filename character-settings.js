@@ -1,5 +1,7 @@
 import { initializeKeywordTooltips } from './tooltip.js';
 import { bringElementToFront } from './utils.js';
+import { initializeInventoryController } from './inventory.js';
+import { createPopupManager } from './popup-manager.js';
 
 const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
@@ -9,6 +11,8 @@ export function initializeCharacterSettings({
     importCharacterFile,
     appendLog
 }) {
+    const popupManager = createPopupManager();
+
     function getActiveCharacter() {
         return getCharacter?.() ?? window.character ?? null;
     }
@@ -19,12 +23,17 @@ export function initializeCharacterSettings({
         const st = activeCharacter.getState();
         const nameEl = document.getElementById('settings-char-name');
         const levelEl = document.getElementById('settings-char-level');
+        const dataSourceEl = document.getElementById('settings-data-source-select');
         if (nameEl) nameEl.value = st.name || '';
         if (levelEl) levelEl.value = st.level ?? 1;
+        if (dataSourceEl) {
+            const selectedSource = st.dataSource ?? st.source ?? '';
+            dataSourceEl.value = selectedSource || '';
+        }
         for (const key of ABILITY_KEYS) {
             const el = document.getElementById(`settings-ability-${key}`);
             if (el) {
-                const value = Number(st.abilities?.[key] ?? activeCharacter._baseAbilities?.[key] ?? 10);
+                const value = Number(activeCharacter._baseAbilities?.[key] ?? st.abilities?.[key] ?? 10);
                 el.value = Number.isFinite(value) ? value : 10;
             }
         }
@@ -35,6 +44,7 @@ export function initializeCharacterSettings({
         if (!activeCharacter) return false;
         const nameEl = document.getElementById('settings-char-name');
         const levelEl = document.getElementById('settings-char-level');
+        const dataSourceEl = document.getElementById('settings-data-source-select');
         const abilityValues = {};
         for (const key of ABILITY_KEYS) {
             const el = document.getElementById(`settings-ability-${key}`);
@@ -57,6 +67,9 @@ export function initializeCharacterSettings({
             }
             activeCharacter.set('level', level);
         }
+        if (dataSourceEl) {
+            activeCharacter.set?.('dataSource', dataSourceEl.value || null);
+        }
         if (Object.keys(abilityValues).length) {
             activeCharacter.setBaseAbilities?.(abilityValues);
         }
@@ -69,6 +82,52 @@ export function initializeCharacterSettings({
         renderCharacterSetupForm();
     }
 
+    function getTrackerRowByResource(resourceKey) {
+        return document.querySelector(`.tracker-row[data-resource="${resourceKey}"]`) || document.querySelector(`.tracker-row input[data-resource-group="${resourceKey}"]`)?.closest('.tracker-row');
+    }
+
+    function getTrackerResourceSnapshot(resourceKey, row = null) {
+        const targetRow = row || getTrackerRowByResource(resourceKey);
+        if (!targetRow) return null;
+        const boxes = Array.from(targetRow.querySelectorAll('input[type="checkbox"]'));
+        return boxes.map((box) => Boolean(box.checked));
+    }
+
+    function syncTrackerResourcesToCharacter() {
+        const activeCharacter = getActiveCharacter();
+        if (!activeCharacter) return false;
+        const snapshot = {};
+        const rows = Array.from(document.querySelectorAll('.tracker-row'));
+        rows.forEach((row) => {
+            const resourceKey = row.dataset.resource || row.querySelector('input[data-resource-group]')?.dataset.resourceGroup || null;
+            if (!resourceKey) return;
+            const values = getTrackerResourceSnapshot(resourceKey, row);
+            if (values && values.length) snapshot[resourceKey] = values;
+        });
+        const prev = activeCharacter.getState?.().resources ?? {};
+        if (JSON.stringify(prev) === JSON.stringify(snapshot)) return false;
+        activeCharacter.set?.('resources', snapshot);
+        return true;
+    }
+
+    function renderTrackerResourcesFromCharacter() {
+        const activeCharacter = getActiveCharacter();
+        if (!activeCharacter) return;
+        const trackedResources = activeCharacter.getState?.().resources ?? {};
+        const rows = Array.from(document.querySelectorAll('.tracker-row'));
+        rows.forEach((row) => {
+            const resourceKey = row.dataset.resource || row.querySelector('input[data-resource-group]')?.dataset.resourceGroup || null;
+            if (!resourceKey) return;
+            const values = Array.isArray(trackedResources[resourceKey]) ? trackedResources[resourceKey] : null;
+            const boxes = Array.from(row.querySelectorAll('input[type="checkbox"]'));
+            if (!boxes.length || !values || values.length !== boxes.length) {
+                boxes.forEach((box) => { box.checked = false; });
+                return;
+            }
+            boxes.forEach((box, index) => { box.checked = Boolean(values[index]); });
+        });
+    }
+
     function markResourceTracker(resourceKey) {
         const group = document.querySelector(`.checkbox-group[data-resource-group="${resourceKey}"]`);
         if (group) {
@@ -76,11 +135,16 @@ export function initializeCharacterSettings({
             const target = boxes.find((box) => !box.checked);
             if (!target) return false;
             target.checked = true;
+            syncTrackerResourcesToCharacter();
             return true;
         }
-        const single = document.querySelector(`input[type="checkbox"][data-resource-group="${resourceKey}"]`);
-        if (single && !single.checked) {
-            single.checked = true;
+        const row = getTrackerRowByResource(resourceKey);
+        if (row) {
+            const boxes = Array.from(row.querySelectorAll('input[type="checkbox"]'));
+            const target = boxes.find((box) => !box.checked);
+            if (!target) return false;
+            target.checked = true;
+            syncTrackerResourcesToCharacter();
             return true;
         }
         return false;
@@ -91,9 +155,6 @@ export function initializeCharacterSettings({
         if (!row) return false;
         const boxes = Array.from(row.querySelectorAll('input[type="checkbox"]'));
         if (!boxes.length) return false;
-        if (mode === 'long' && resourceKey === 'lucky') {
-            return false;
-        }
         const shouldRestoreAll = mode === 'long';
         const shouldResetActionSurgeOnly = mode === 'short' && resourceKey === 'action-surge';
         let changed = false;
@@ -106,6 +167,7 @@ export function initializeCharacterSettings({
             }
         });
         if (!changed) return false;
+        syncTrackerResourcesToCharacter();
         const label = getTrackerLabel(resourceKey, row);
         const state = getTrackerState(resourceKey, row);
         const suffix = state ? `（剩餘 ${state.remaining} 點）` : '';
@@ -200,16 +262,30 @@ export function initializeCharacterSettings({
         const state = getTrackerState(resourceKey, row);
         const action = checkbox.checked ? '已記錄' : '已取消';
         const suffix = state ? `（剩餘 ${state.remaining} 點）` : '';
+        syncTrackerResourcesToCharacter();
         appendLog?.(`<span style="color:var(--secondary)">[資源] ${action}：${label}${suffix}</span>`);
     }
 
     function openSettingsPopup() {
         const overlay = document.getElementById('settings-overlay');
         if (!overlay) return;
-        try { overlay.style.display = ''; } catch (e) {}
-        overlay.classList.remove('hidden');
+        popupManager.setActivePopup(overlay, 'settings');
+        overlay.style.opacity = '0';
+        const popup = overlay.querySelector('.manual-popup');
+        if (popup) {
+            popup.style.opacity = '0';
+            popup.style.transform = 'translateY(10px)';
+        }
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+            if (popup) {
+                popup.style.opacity = '1';
+                popup.style.transform = 'translateY(0)';
+            }
+        });
         bringElementToFront(overlay);
         try {
+            window.switchSettingsTab?.('character');
             const summary = document.getElementById('settings-character-summary');
             if (summary && getActiveCharacter()) {
                 const st = getActiveCharacter().getState();
@@ -234,8 +310,32 @@ export function initializeCharacterSettings({
                 renderSettingsSummary();
             }
             renderCharacterSetupForm();
+            renderTrackerResourcesFromCharacter();
         } catch (e) { /* ignore */ }
     }
+
+    const inventoryController = initializeInventoryController({
+        getCharacter: getActiveCharacter,
+        appendLog,
+        initializeKeywordTooltips,
+        bringElementToFront
+    });
+
+    const {
+        normalizeInventoryItems,
+        getInventoryFromCharacter,
+        setInventoryFormState,
+        renderInventoryList,
+        toggleInventoryDeleteMode,
+        applyInventoryItemChange,
+        saveInventoryToCharacter,
+        addInventoryItem,
+        handleInventoryListClick,
+        handleInventoryListChange,
+        openInventoryPopup,
+        closeInventoryPopup,
+        saveInventoryFromForm
+    } = inventoryController;
 
     function renderSettingsSummary() {
         const summary = document.getElementById('settings-character-summary');
@@ -290,8 +390,12 @@ export function initializeCharacterSettings({
             return;
         }
         if (!overlay) return;
-        overlay.classList.add('hidden');
-        try { overlay.style.display = 'none'; } catch (e) {}
+        popupManager.closeActivePopup(overlay, 'settings');
+        const popup = overlay.querySelector('.manual-popup');
+        if (popup) {
+            popup.style.opacity = '0';
+            popup.style.transform = 'translateY(10px)';
+        }
     }
 
     function refreshDynamicTooltips() {
@@ -332,34 +436,11 @@ export function initializeCharacterSettings({
         const abilities = st.abilities || {};
         const name = st.name || '--';
         const level = st.level ?? '--';
-        const currHp = st.currentHp ?? '--';
-        const maxHp = st.maxHp ?? '--';
-        const ac = st.ac ?? '--';
-        const longbow = (st.longbowHit >= 0) ? `+${st.longbowHit}` : (st.longbowHit ?? '--');
         const abMap = { str: 'STR', dex: 'DEX', con: 'CON', int: 'INT', wis: 'WIS', cha: 'CHA' };
-
-        const conScore = Number(st.abilities?.con ?? activeCharacter._baseAbilities?.con ?? 10);
-        const conMod = activeCharacter.abilityModifier?.(conScore) ?? Math.floor((conScore - 10) / 2);
-        const hpFormula = `10（基礎 HP） + ${conMod}（CON 調整值） + ${Math.max(0, level - 1)} × (6（每級戰士生命骰） + ${conMod}（CON 調整值）) = ${maxHp}（最大 HP）`;
-        const dexScore = Number(st.abilities?.dex ?? activeCharacter._baseAbilities?.dex ?? 10);
-        const dexMod = activeCharacter.abilityModifier?.(dexScore) ?? Math.floor((dexScore - 10) / 2);
-        const acFormula = `12（基礎 AC） + ${dexMod}（DEX 調整值） + 1（護甲加成） = ${ac}（最終 AC）`;
-        const prof = activeCharacter.getProficiencyBonus?.(level) ?? activeCharacter.getProficiencyBonus(level);
-        const longbowBreakdown = activeCharacter.getLongbowHitBreakdown?.() ?? {
-            dexMod,
-            proficiencyBonus: prof,
-            styleBonus: 2,
-            total: Number(st.longbowHit ?? 0)
-        };
-        const longbowFormula = `${longbowBreakdown.dexMod >= 0 ? '+' + longbowBreakdown.dexMod : longbowBreakdown.dexMod}（敏捷調整值） + ${longbowBreakdown.proficiencyBonus >= 0 ? '+' + longbowBreakdown.proficiencyBonus : longbowBreakdown.proficiencyBonus}（熟練加值） + ${longbowBreakdown.styleBonus >= 0 ? '+' + longbowBreakdown.styleBonus : longbowBreakdown.styleBonus}（箭術風格） = ${longbowBreakdown.total >= 0 ? '+' + longbowBreakdown.total : longbowBreakdown.total}（長弓命中）`;
 
         let html = '';
         html += `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
             <div style="font-weight:700; font-size:1rem; color:var(--text-main);">${name} <span style="font-weight:500; color:var(--text-muted); font-size:0.9rem;">(Lv ${level})</span></div>
-            <div style="text-align:right; font-size:0.9rem; color:var(--text-muted);">
-                HP: <strong class="keyword" data-tooltip="${hpFormula}" style="color:var(--success);">${currHp}/${maxHp}</strong>
-                <div style="margin-top:4px;">AC: <strong class="keyword" data-tooltip="${acFormula}" style="color:var(--primary);">${ac}</strong> · 長弓: <strong class="keyword" data-tooltip="${longbowFormula}" style="color:var(--secondary);">${longbow}</strong></div>
-            </div>
         </div>`;
 
         html += `<div style="display:flex; gap:8px; flex-wrap:wrap;">`;
@@ -432,6 +513,7 @@ export function initializeCharacterSettings({
                     renderCharacterSetupForm();
                 }
             } catch (e) {}
+            try { renderTrackerResourcesFromCharacter(); } catch (e) {}
             try { refreshDynamicTooltips(); } catch (e) {}
             try { renderDerivedStatsText(); } catch (e) {}
             try { renderCharPanelSummary(); } catch (e) {}
@@ -444,6 +526,8 @@ export function initializeCharacterSettings({
         refreshDynamicTooltips,
         resetCharacterSetupForm,
         markResourceTracker,
+        syncTrackerResourcesToCharacter,
+        renderTrackerResourcesFromCharacter,
         restoreTrackerResource,
         restoreAllTrackerResources,
         handleTrackedButtonClick,
@@ -452,6 +536,15 @@ export function initializeCharacterSettings({
         openSettingsPopup,
         renderSettingsSummary,
         closeSettingsPopup,
+        openInventoryPopup,
+        closeInventoryPopup,
+        saveInventoryFromForm,
+        addInventoryItem,
+        handleInventoryListClick,
+        handleInventoryListChange,
+        setInventoryFormState,
+        renderInventoryList,
+        toggleInventoryDeleteMode,
         renderDerivedStatsText,
         renderCharPanelSummary,
         attachImportDropzone,
