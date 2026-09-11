@@ -12,7 +12,7 @@ export class Character {
             ac: Number.isFinite(data.ac) ? data.ac : null,
             acOverride: Number.isFinite(data.acOverride) ? Number(data.acOverride) : null,
             longbowHit: Number.isFinite(data.longbowHit) ? data.longbowHit : null,
-            longbowHitOverride: Number.isFinite(data.longbowHitOverride) ? Number(data.longbowHitOverride) : null,
+            longbowHitOverride: Number.isFinite(data.longbowHitOverride) ? Number(this.longbowHitOverride) : null,
             gold: Number.isFinite(Number(data.gold)) ? Number(data.gold) : 0,
             inventory: (() => {
                 const inventory = data.inventory && typeof data.inventory === 'object' ? { ...data.inventory } : {};
@@ -49,6 +49,13 @@ export class Character {
         this.listeners = new Set();
         // keep an immutable copy of base abilities to allow applying/removing background bonuses
         this._baseAbilities = { ...this.data.abilities };
+        
+        // Initialize equipment manager if EquipmentManager class is available
+        this.equipmentManager = null;
+        if (typeof EquipmentManager !== 'undefined') {
+            this.equipmentManager = new EquipmentManager(data.equipment || {});
+        }
+        
         this._syncDerivedStats();
         // if a default background was provided, apply its bonuses
         if (this.data.background && this.data.background.name) {
@@ -85,6 +92,12 @@ export class Character {
     }
 
     getDerivedAC() {
+        // Use equipment manager if available for comprehensive AC calculation
+        if (this.equipmentManager) {
+            return this.equipmentManager.getTotalAC(this);
+        }
+        
+        // Fallback to legacy armor-only calculation
         const dexScore = Number(this.data?.abilities?.dex ?? 10);
         const dexMod = this.abilityModifier(dexScore);
         const styleBonus = this.getStyleBonus('defense', 'ac', 1);
@@ -402,15 +415,83 @@ export class Character {
     setArmor(armor) {
         if (!armor) {
             this.data.armor = null;
+            if (this.equipmentManager) {
+                this.equipmentManager.equip('armor', null);
+            }
             this._syncDerivedStats();
             this._emitChange();
             return true;
         }
         // shallow clone accepted armor object
         this.data.armor = Object.assign({}, armor);
+        if (this.equipmentManager) {
+            this.equipmentManager.equip('armor', armor);
+        }
         this._syncDerivedStats();
         this._emitChange();
         return true;
+    }
+
+    // Equip weapon using equipment manager
+    equipWeapon(weapon) {
+        if (!this.equipmentManager) {
+            console.warn('EquipmentManager not available');
+            return false;
+        }
+        const success = this.equipmentManager.equip('weapon', weapon);
+        if (success) {
+            this._syncDerivedStats();
+            this._emitChange();
+        }
+        return success;
+    }
+
+    // Equip necklace using equipment manager
+    equipNecklace(necklace) {
+        if (!this.equipmentManager) {
+            console.warn('EquipmentManager not available');
+            return false;
+        }
+        const success = this.equipmentManager.equip('necklace', necklace);
+        if (success) {
+            this._syncDerivedStats();
+            this._emitChange();
+        }
+        return success;
+    }
+
+    // Get equipped weapon
+    getEquippedWeapon() {
+        return this.equipmentManager ? this.equipmentManager.getEquippedItem('weapon') : null;
+    }
+
+    // Get equipped necklace
+    getEquippedNecklace() {
+        return this.equipmentManager ? this.equipmentManager.getEquippedItem('necklace') : null;
+    }
+
+    // Get weapon attack bonus
+    getWeaponAttackBonus(weapon) {
+        if (!this.equipmentManager) return 0;
+        return this.equipmentManager.getWeaponAttackBonus(this, weapon);
+    }
+
+    // Get weapon damage bonus
+    getWeaponDamageBonus(weapon) {
+        if (!this.equipmentManager) return 0;
+        return this.equipmentManager.getWeaponDamageBonus(this, weapon);
+    }
+
+    // Get weapon attack breakdown
+    getWeaponAttackBreakdown(weapon) {
+        if (!this.equipmentManager) return null;
+        return this.equipmentManager.getWeaponAttackBreakdown(this, weapon);
+    }
+
+    // Get AC breakdown
+    getACBreakdown() {
+        if (!this.equipmentManager) return null;
+        return this.equipmentManager.getACBreakdown(this);
     }
 
     adjustHp(delta) {
@@ -432,7 +513,7 @@ export class Character {
     }
 
     toJSON() {
-        return {
+        const json = {
             id: this.data.id,
             name: this.data.name,
             level: this.data.level,
@@ -455,6 +536,13 @@ export class Character {
             notes: this.data.notes,
             feats: (this.data.feats || []).map(f => f ? ({ name: f.name, bonuses: { ...(f.bonuses || {}) } }) : null).filter(Boolean)
         };
+        
+        // Include equipment data if equipment manager is available
+        if (this.equipmentManager) {
+            json.equipment = this.equipmentManager.toJSON();
+        }
+        
+        return json;
     }
 
     abilityModifier(score) {
