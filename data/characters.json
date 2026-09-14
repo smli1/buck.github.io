@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "meta": {
+    "description": "Registry of RPG character files for character-select.html",
+    "schema": "player-data-v2",
+    "updated": "2026-09-11"
+  },
+  "characters": [
+    {
+      "id": "player-1",
+      "file": "characters/player-1.json",
+      "name": "巴克",
+      "level": 9,
+      "race": "Human",
+      "class": "Fighter",
+      "subclass": "Champion",
+      "background": "士兵"
+    }
+  ]
+}

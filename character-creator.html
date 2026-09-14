@@ -1,0 +1,2842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧙 Character Creator — Step by Step</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        html { overflow-y: auto; overflow-x: hidden; height: auto; }
+        body { overflow-y: auto; overflow-x: hidden; height: auto; min-height: 100vh; }
+
+        .cc-wrap { max-width: 860px; margin: 0 auto; padding: 16px 16px 60px; display: flex; flex-direction: column; gap: 14px; }
+
+        .cc-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .cc-header h1 { font-size: 1.35rem; margin: 0; }
+
+        .cc-progress { display: flex; gap: 4px; }
+        .cc-progress .dot { flex: 1; height: 6px; border-radius: 3px; background: var(--border-color); transition: background 200ms ease; }
+        .cc-progress .dot.done { background: var(--primary); }
+        .cc-progress .dot.current { background: var(--secondary); }
+
+        .cc-step-title { font-weight: 800; font-size: 1.15rem; color: var(--warning); }
+        .cc-step-desc { color: var(--text-muted); font-size: 0.9rem; }
+
+        /* step cards */
+        .step-panel { display: none; flex-direction: column; gap: 14px; }
+        .step-panel.active { display: flex; }
+
+        .cc-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; display: grid; gap: 12px; }
+
+        .cc-section-title { font-weight: 700; font-size: 0.95rem; color: var(--secondary); }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+
+        .cc-field { display: flex; flex-direction: column; gap: 4px; }
+        .cc-field label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); }
+        .cc-field input, .cc-field select, .cc-field textarea {
+            width: 100%; padding: 8px 10px; border-radius: 8px;
+            background: rgba(15,23,42,0.75); border: 1px solid rgba(255,255,255,0.12);
+            color: var(--text-main); font-size: 0.92rem;
+        }
+        .cc-field input:focus, .cc-field select:focus, .cc-field textarea:focus {
+            outline: none; border-color: rgba(96,165,250,0.6); box-shadow: 0 0 0 2px rgba(96,165,250,0.15);
+        }
+        .cc-field textarea { resize: vertical; min-height: 70px; }
+
+        .cc-note { font-size: 0.85rem; color: var(--text-muted); line-height: 1.45; }
+        .cc-hint { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* spell detail panel */
+        .cc-spell-info {
+            margin-top: 12px; padding: 14px; border-radius: 12px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+            border: 1px solid var(--border-color);
+        }
+        .cc-spell-info .cc-empty { padding: 18px 10px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+        .cc-shead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .cc-shead h5 { margin: 0; font-size: 1.3rem; line-height: 1.2; }
+        .cc-schips { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+        .cc-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; }
+        .cc-chip-lv { background: rgba(96,165,250,0.15); color: #bfdbfe; border: 1px solid rgba(96,165,250,0.4); }
+        .cc-chip-conc { background: rgba(251,191,36,0.12); color: #fcd34d; border: 1px solid rgba(251,191,36,0.4); }
+        .cc-chip-school { background: rgba(255,255,255,0.06); color: var(--text-main); border: 1px solid rgba(255,255,255,0.14); }
+        .cc-chip-school::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--sch, #94a3b8); }
+        .cc-status { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
+        .cc-status-row { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; align-items: center; }
+        .cc-status-row i { font-style: normal; font-weight: 800; font-size: 0.78rem; line-height: 1; }
+        .cc-status-row span { font-size: 0.69rem; padding: 2px 8px; border-radius: 999px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; }
+        .cc-status-buff span { background: rgba(21,170,125,0.15); color: #5eead4; border: 1px solid rgba(21,170,125,0.45); }
+        .cc-status-buff i { color: #34d399; margin-right: 3px; }
+        .cc-status-debuff span { background: rgba(248,113,113,0.12); color: #fca5a5; border: 1px solid rgba(248,113,113,0.45); }
+        .cc-status-debuff i { color: #f87171; margin-right: 3px; }
+        .cc-sstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 12px; }
+        .cc-stat { background: rgba(15,23,42,0.55); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 7px 9px; min-width: 0; }
+        .cc-stat i { display: block; font-style: normal; font-size: 0.66rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cc-stat b { font-size: 0.83rem; font-weight: 600; color: var(--text-main); word-break: break-word; }
+        .cc-sdmg {
+            display: flex; gap: 10px; align-items: center; margin-bottom: 12px;
+            padding: 10px 12px; border-radius: 10px;
+            background: rgba(21,170,125,0.08); border: 1px solid rgba(21,170,125,0.28);
+        }
+        .cc-sdmg .cc-dmgicon { font-size: 1.15rem; line-height: 1; }
+        .cc-sdmg b { font-size: 1.02rem; color: var(--secondary); }
+        .cc-sdmg small { display: block; font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+        .cc-smain { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); gap: 14px; align-items: start; }
+        .cc-stext { font-size: 0.86rem; line-height: 1.72; color: #dbe2ec; text-align: justify; text-wrap: pretty; hyphens: auto; max-width: 68ch; max-height: 320px; overflow-y: auto; padding-right: 8px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.25) transparent; }
+        .cc-stext::-webkit-scrollbar { width: 8px; }
+        .cc-stext::-webkit-scrollbar-track { background: transparent; }
+        .cc-stext::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.22); border-radius: 8px; }
+        .cc-stext p { margin: 0 0 0.5em; }
+        .cc-stext p:last-child { margin-bottom: 0; }
+        .cc-sgrid { margin: 0; }
+        .cc-sgrid svg { display: block; width: 100%; height: auto; border-radius: 8px; background: rgba(0,0,0,0.3); touch-action: none; cursor: grab; }
+        .cc-sgrid svg.dragging { cursor: grabbing; }
+        .cc-shigher { margin-top: 12px; border-top: 1px dashed var(--border-color); padding-top: 8px; font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+        .cc-shigher b { color: var(--warning); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.06em; display: block; margin-bottom: 3px; }
+        @media (max-width: 760px) { .cc-smain { grid-template-columns: 1fr; } }
+
+        /* ability boxes — step 2 stat cards */
+        .ab-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+        .cc-ability { position: relative; display: grid; gap: 5px; background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius: 10px; padding: 9px 6px 8px; text-align: center; }
+        .cc-ability-head { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+        .cc-ability-abbr { font-size: 0.8rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.07em; }
+        .cc-ability-name { font-size: 0.6rem; color: var(--text-muted); opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em; }
+        .cc-ability-core { display: flex; align-items: center; justify-content: center; gap: 7px; }
+        .cc-ability input { width: 62px; text-align: center; padding: 6px 4px; border-radius: 6px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); color: var(--text-main); font-size: 1.15rem; font-weight: 800; }
+        .cc-ability-mod { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; border-radius: 50%; font-size: 0.8rem; font-weight: 800; color: var(--secondary); background: rgba(59,130,246,0.14); border: 1px solid rgba(59,130,246,0.35); }
+        .cc-ability-mod.neg { color: var(--warning); background: rgba(250,204,21,0.1); border-color: rgba(250,204,21,0.35); }
+        .cc-ability-foot { min-height: 24px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .cc-ability.assignable { cursor: pointer; }
+        .cc-ability.assignable:hover { border-color: rgba(96,165,250,0.55); background: rgba(255,255,255,0.07); }
+        .cc-ability-clickhint { font-size: 0.6rem; color: var(--secondary); opacity: 0; transition: opacity 120ms ease; }
+        .cc-ability.assignable:hover .cc-ability-clickhint { opacity: 1; }
+        .cc-pbstep { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border-color); background: rgba(255,255,255,0.06); color: var(--text-main); font-size: 0.9rem; font-weight: 800; cursor: pointer; line-height: 1; }
+        .cc-pbstep:hover { background: rgba(255,255,255,0.14); }
+        .cc-pbstep:disabled { opacity: 0.35; cursor: not-allowed; }
+        .cc-pbcost { font-size: 0.62rem; color: var(--text-muted); letter-spacing: 0.02em; }
+
+        /* radio/checkbox chip rows */
+        .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 20px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.04); cursor: pointer; font-size: 0.82rem; color: var(--text-main); user-select: none; }
+        .chip input { accent-color: var(--primary); }
+        .chip.on { border-color: var(--primary); background: rgba(21,170,125,0.15); }
+
+        .cc-skill-group { margin-bottom: 12px; }
+        .cc-skill-group:last-child { margin-bottom: 0; }
+        .cc-skill-group-title { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+        .cc-skill-group-title b { color: var(--secondary); font-size: 0.85rem; letter-spacing: 0.06em; }
+        .cc-skill-group-title span { font-size: 0.72rem; color: var(--text-muted); }
+        .cc-skill-group-title em { font-style: normal; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; }
+        .cc-sk-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 5px; }
+        .cc-sk-row b { color: var(--secondary); font-size: 0.72rem; letter-spacing: 0.06em; min-width: 34px; }
+
+        .method-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+        .method-tab { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; font-weight: 700; }
+        .method-tab.active { border-color: var(--secondary); color: var(--secondary); background: rgba(59,130,246,0.12); }
+
+        /* step 2 method toolbar */
+        .method-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 12px; min-height: 44px; }
+        .method-bar .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .method-note { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+        .ab-pool { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+        .ab-poolchip { min-width: 30px; height: 30px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(59,130,246,0.14); border: 1px solid rgba(59,130,246,0.4); color: var(--secondary); font-size: 0.82rem; font-weight: 800; }
+        .pb-meter { display: flex; align-items: center; gap: 10px; flex: 1 1 200px; min-width: 170px; }
+        .pb-track { flex: 1; height: 8px; border-radius: 6px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .pb-fill { height: 100%; border-radius: 6px; background: #22c55e; transition: width 180ms ease, background 180ms ease; }
+        .pb-label { font-size: 0.75rem; font-weight: 800; color: var(--text-main); white-space: nowrap; }
+        .pb-warn { display: none; font-size: 0.72rem; font-weight: 800; color: var(--warning); }
+        .pb-warn.on { display: inline-block; }
+        .cc-ability-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        .cc-ability-total { font-size: 0.82rem; color: var(--text-muted); }
+        .cc-ability-total b { color: var(--warning); font-size: 1rem; }
+        .cc-ability-total em { font-style: normal; color: var(--secondary); font-weight: 800; }
+
+        /* system picker (step 0) */
+        .system-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+        .system-group-label { grid-column: 1 / -1; font-size: 0.85rem; font-weight: 800; color: var(--warning); margin-top: 6px; letter-spacing: 0.05em; }
+        .system-card { text-align: left; display: grid; gap: 4px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.04); color: var(--text-main); cursor: pointer; font-size: 0.9rem; transition: border-color 150ms ease, background 150ms ease; }
+        .system-card:hover { border-color: rgba(96,165,250,0.5); background: rgba(255,255,255,0.07); }
+        .system-card.active { border-color: var(--primary); background: rgba(21,170,125,0.15); }
+        .system-card .sys-name { font-weight: 800; }
+        .system-card .sys-tag { font-size: 0.78rem; color: var(--text-muted); }
+        @media (max-width: 720px) { .system-grid { grid-template-columns: 1fr 1fr; } .system-card { min-height: 64px; } }
+
+        /* dynamic rows (items, attacks, features) */
+        .cc-row-list { display: grid; gap: 8px; }
+        .cc-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); }
+        .cc-row input { flex: 1; min-width: 90px; }
+        .cc-row input.cc-sm { flex: 0 1 70px; }
+
+        /* gear reference picker (step 4) */
+        .gear-picker { display: grid; gap: 8px; }
+        .gear-search { display: flex; gap: 8px; flex-wrap: wrap; }
+        .gear-search input { flex: 1 1 220px; }
+        .gear-search select { flex: 0 1 190px; }
+        .gear-results { max-height: 260px; overflow-y: auto; scrollbar-width: thin; display: grid; gap: 6px; padding-right: 4px; }
+        .gear-results::-webkit-scrollbar { width: 6px; }
+        .gear-results::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        .gear-item { width: 100%; text-align: left; font-family: inherit; color: var(--text-main); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
+        .gear-item:hover { background: rgba(255,255,255,0.07); border-color: rgba(96,165,250,0.4); }
+        .gi-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+        .gi-name { font-size: 0.85rem; font-weight: 700; }
+        .gi-meta { font-size: 0.7rem; color: var(--text-muted); }
+        .gi-right { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+        .gi-added { font-size: 0.72rem; font-weight: 800; color: var(--secondary); background: rgba(59,130,246,0.14); border: 1px solid rgba(59,130,246,0.35); padding: 2px 8px; border-radius: 12px; }
+        .gear-empty { padding: 12px; text-align: center; color: var(--text-muted); font-size: 0.8rem; }
+
+        .cc-nav { display: flex; justify-content: space-between; gap: 10px; position: sticky; bottom: 8px; background: rgba(9,9,14,0.85); backdrop-filter: blur(6px); padding: 10px; border: 1px solid var(--border-color); border-radius: 12px; }
+        .cc-nav .btn { flex: 0 1 140px; }
+        .cc-nav .btn.btn-primary-fill { flex: 1; }
+
+        .btn-secondary-ghost { background: rgba(255,255,255,0.07); color: var(--text-main); border: 1px solid var(--border-color); }
+        .btn-secondary-ghost:hover { background: rgba(255,255,255,0.13); }
+
+        /* review / character card */
+        .cc-card-sheet { border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, rgba(21,28,42,0.6), rgba(9,12,20,0.9)); }
+        .cc-sheet-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px; background: linear-gradient(135deg, #1e1b4b, #31102f); border-bottom: 1px solid var(--border-color); }
+        .cc-sheet-header h2 { margin: 0; font-size: 1.3rem; }
+        .cc-sheet-sub { color: var(--text-muted); font-size: 0.9rem; }
+        .cc-sheet-body { padding: 16px; display: grid; gap: 16px; }
+        .cc-sheet-grid { display: grid; gap: 10px; }
+        .cc-sheet-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+        .cc-block { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 12px; }
+        .cc-block h4 { margin: 0 0 8px; font-size: 0.85rem; color: var(--warning); text-transform: uppercase; letter-spacing: 0.04em; }
+        .cc-ability-big { text-align: center; }
+        .cc-ability-big .score { font-size: 1.5rem; font-weight: 800; }
+        .cc-ability-big .label { font-size: 0.72rem; color: var(--text-muted); }
+        .cc-ability-big .mod { font-size: 0.95rem; color: var(--secondary); font-weight: 800; }
+        .cc-tag-row { display: flex; flex-wrap: wrap; gap: 6px; }
+        .cc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .cc-chip { font-size: 0.78rem; padding: 3px 10px; border-radius: 12px; background: rgba(59,130,246,0.12); color: var(--secondary); border: 1px solid rgba(59,130,246,0.25); }
+
+        .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+        .confirm-overlay.hidden { display: none; }
+        .confirm-box { background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; display: grid; gap: 12px; }
+        .confirm-box p { margin: 0; color: var(--text-main); font-size: 0.92rem; }
+        .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .confirm-actions .btn { flex: 0 1 130px; }
+        #export-list { display: grid; gap: 6px; }
+        #export-list .e-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        #export-list code { color: var(--secondary); font-size: 0.85rem; }
+
+        @media (max-width: 720px) {
+            .cc-wrap { padding: 12px 12px 76px; }
+            .cc-card { padding: 14px; }
+            .cc-step-title { font-size: 1.05rem; }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .grid-6 { grid-template-columns: repeat(3, 1fr); }
+            .ab-grid { grid-template-columns: repeat(3, 1fr); }
+            .cc-sheet-grid.cols-2 { grid-template-columns: 1fr; }
+            .cc-sheet-body { padding: 14px; }
+            .cc-sheet-header { padding: 14px; }
+            .cc-header { flex-direction: column; align-items: stretch; gap: 10px; }
+            .cc-header .btn { align-self: flex-start; }
+            .cc-nav .btn { flex: 1 1 auto; min-height: 44px; }
+        }
+
+        @media (max-width: 440px) {
+            .cc-wrap { padding: 10px 10px 80px; }
+            .cc-header h1 { font-size: 1.15rem; }
+            .cc-card { padding: 12px; }
+            .cc-step-title { font-size: 1rem; }
+            .cc-step-desc { font-size: 0.85rem; }
+            .system-grid { grid-template-columns: 1fr; }
+            .method-tabs { display: grid; grid-template-columns: 1fr 1fr; }
+            .method-tab { text-align: center; padding: 8px 6px; }
+            .cc-ability { padding: 6px 2px; }
+            .cc-ability input { font-size: 1rem; padding: 5px 2px; }
+            .ab-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .cc-ability input { width: 58px; }
+            .cc-row input { min-width: 56px; }
+            .cc-row input.cc-sm { flex: 0 1 52px; }
+            .cc-row { padding: 6px; }
+            .cc-sheet-header { flex-direction: column; align-items: flex-start; }
+            .cc-sheet-header .cc-tag-row { flex-direction: row !important; align-items: flex-start !important; }
+            .cc-sheet-header h2 { font-size: 1.15rem; }
+            .cc-block { padding: 10px; }
+            .cc-ability-big .score { font-size: 1.3rem; }
+            .cc-nav { gap: 8px; padding: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+            .cc-nav .btn { font-size: 0.88rem; padding-left: 10px; padding-right: 10px; }
+            .confirm-box { padding: 16px; }
+            .confirm-actions { flex-direction: column-reverse; }
+            .confirm-actions .btn { flex: 1 1 auto; width: 100%; min-height: 44px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="cc-wrap">
+        <div class="cc-header">
+            <h1>🧙 Create a Tabletop Character</h1>
+            <a class="btn btn-secondary-ghost" style="flex:0; padding:8px 14px; text-decoration:none;" href="character-select.html">← Character Select</a>
+        </div>
+        <div class="cc-progress" id="cc-progress"></div>
+
+        <!-- STEP 0 -->
+        <section class="step-panel active" id="step-0" data-step="0">
+            <div>
+                <div class="cc-step-title">Step 0 · Choose Your Game System</div>
+                <div class="cc-step-desc">Which rules does this character follow? The wizard adapts to the system: ability scores, bonuses, hit dice, armor, and spell DCs.</div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Game System</div>
+                <div class="system-grid" id="s0-systems"></div>
+            </div>
+            <div class="cc-card" id="s0-summary" style="display:none;">
+                <div class="cc-section-title" id="s0-current">—</div>
+                <div class="cc-note" id="s0-tagline"></div>
+            </div>
+        </section>
+
+        <!-- STEP 1 -->
+        <section class="step-panel" id="step-1" data-step="1">
+            <div>
+                <div class="cc-step-title">Step 1 · Choose Race, Class, and Background</div>
+                <div class="cc-step-desc">The identity of your character. Race shapes their physical traits, class defines their role, background sets their history.</div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-hint" id="s1-system-hint">No system chosen yet — go back to Step 0.</div>
+                <div class="grid-2">
+                    <div class="cc-field">
+                        <label>Race</label>
+                        <select id="s1-race" onchange="applyRace()"></select>
+                        <div class="cc-hint" id="s1-race-hint"></div>
+                    </div>
+                    <div class="cc-field">
+                        <label>Class</label>
+                        <select id="s1-class" onchange="applyClass()"></select>
+                        <div class="cc-hint" id="s1-class-hint"></div>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="cc-field">
+                        <label>Subclass (optional)</label>
+                        <select id="s1-subclass" onchange="onSubclassChanged()"><option value="">— Select class first —</option></select>
+                        <input id="s1-subclass-custom" type="text" placeholder="e.g. Champion" style="display:none; margin-top:6px;">
+                    </div>
+                    <div class="cc-field">
+                        <label>Background</label>
+                        <select id="s1-background" onchange="applyBackground()"></select>
+                        <div class="cc-hint" id="s1-bg-hint"></div>
+                    </div>
+                </div>
+                <div class="cc-field">
+                    <label>Character Level</label>
+                    <input id="s1-level" type="number" min="1" max="20" value="1" onchange="levelChanged()">
+                    <div class="cc-hint">Affects <span id="s1-pb-label" style="color:var(--secondary);font-weight:700;">Proficiency Bonus</span>: <span id="s1-pb" style="color:var(--secondary);font-weight:700;">+2</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 2 -->
+        <section class="step-panel" id="step-2" data-step="2">
+            <div>
+                <div class="cc-step-title">Step 2 · Stat Blocks</div>
+                <div class="cc-step-desc">Ability scores drive every check in the game. Generate them, then the modifiers compute automatically.</div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Generate Ability Scores</div>
+                <div class="method-tabs">
+                    <button class="method-tab active" data-m="standard" onclick="setMethod('standard')">Standard Array</button>
+                    <button class="method-tab" data-m="roll" onclick="setMethod('roll')">4d6 Roll</button>
+                    <button class="method-tab" data-m="pointbuy" onclick="setMethod('pointbuy')">Point Buy</button>
+                    <button class="method-tab" data-m="manual" onclick="setMethod('manual')">Manual</button>
+                </div>
+                <div id="method-bar" class="method-bar"></div>
+                <div class="ab-grid" id="ability-grid"></div>
+                <div class="cc-ability-summary">
+                    <span class="cc-ability-total" id="ab-total"></span>
+                    <span class="cc-hint">Racial / ancestry bonuses apply automatically when you pick a race on Step 1.</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 3 -->
+        <section class="step-panel" id="step-3" data-step="3">
+            <div>
+                <div class="cc-step-title">Step 3 · Proficiencies & Languages</div>
+                <div class="cc-step-desc">Choose what your character is trained in: saving throws, skills, and languages.</div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title" id="s3-saves-title">Saving Throws</div>
+                <div class="chip-row" id="s3-saves"></div>
+                <div class="cc-note">Class saving throws are pre-selected when you pick a class.</div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Skill Proficiencies</div>
+                <div id="s3-skills"></div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Languages</div>
+                <div class="chip-row" id="s3-languages"></div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Other Proficiencies</div>
+                <div class="cc-field">
+                    <textarea id="s3-other" rows="3" placeholder="Armor, weapons, tools... e.g. Light armor, Rapier, Thieves' tools"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 4 -->
+        <section class="step-panel" id="step-4" data-step="4">
+            <div>
+                <div class="cc-step-title">Step 4 · Equipment</div>
+                <div class="cc-step-desc">Starting gear, gold, armor, and weapons. Your class suggests some — feel free to adjust.</div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Starting Gold</div>
+                <div class="cc-field">
+                    <input id="s4-gold" type="number" min="0" value="0">
+                </div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Armor</div>
+                <div class="cc-field">
+                    <select id="s4-armor" onchange="armorChanged()"><option value="">No Armor (Unarmored)</option></select>
+                </div>
+                <div class="cc-hint" id="s4-armor-hint"></div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Weapons</div>
+                <div class="chip-row" id="s4-weapons"></div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Inventory Items</div>
+                <div class="cc-row-list" id="s4-items"></div>
+                <div><button class="btn btn-secondary-ghost" type="button" style="flex:0; padding:6px 12px; font-size:0.85rem;" onclick="addItemRow()">+ Add item</button></div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Gear Reference</div>
+                <div class="cc-hint">Search the adventuring gear list and click an item to add it to Inventory — clicking again stacks more.</div>
+                <div class="gear-picker">
+                    <div class="gear-search">
+                        <input id="s4-item-filter" type="text" placeholder="Filter gear… e.g. rope, lantern, tool" oninput="gearFilter()">
+                        <select id="s4-gear-cat" onchange="gearFilter()"><option value="">All categories</option></select>
+                    </div>
+                    <div id="gear-results" class="gear-results"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 5 -->
+        <section class="step-panel" id="step-5" data-step="5">
+            <div>
+                <div class="cc-step-title">Step 5 · Attacks & Spellcasting</div>
+                <div class="cc-step-desc">Define how your character fights. Attack bonus is auto-computed from proficiency + ability modifier.</div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Attacks</div>
+                <div class="cc-row-list" id="s5-attacks"></div>
+                <div><button class="btn btn-secondary-ghost" type="button" style="flex:0; padding:6px 12px; font-size:0.85rem;" onclick="addAttackRow()">+ Add attack</button></div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-section-title">Spellcasting</div>
+                <label class="chip" style="align-self:flex-start;" onclick="">
+                    <input type="checkbox" id="s5-spellcaster" onchange="spellcasterChanged()"> This character is a spellcaster
+                </label>
+                <div id="s5-spell-box" class="cc-field" style="display:none; gap:8px;">
+                    <div class="grid-3">
+                        <div class="cc-field"><label>Spellcasting Ability</label><select id="s5-spell-ability" onchange="refreshStep5()"><option value="int">INT</option><option value="wis">WIS</option><option value="cha">CHA</option></select></div>
+                        <div class="cc-field"><label>Save DC</label><input id="s5-spell-dc" type="number" readonly></div>
+                        <div class="cc-field"><label>Spell Attack</label><input id="s5-spell-atk" type="number" readonly></div>
+                    </div>
+                    <div class="cc-field"><label>Spell Slots (levels 1–9)</label><input id="s5-spell-slots" type="text" placeholder="e.g. 4,3,2" oninput="draft._slotsTouched = true"></div>
+                    <div class="cc-field">
+                        <label>Spells by Level</label>
+                        <div class="cc-note">Cantrips are level 0. Max spell level at your class level: <b id="s5-max-level" style="color:var(--secondary);"></b></div>
+                        <div class="cc-row-list" id="s5-spell-list"></div>
+                        <div><button class="btn btn-secondary-ghost" type="button" style="flex:0; padding:6px 12px; font-size:0.85rem;" onclick="addSpellRow()">+ Add spell</button></div>
+                        <div id="s5-spell-info" class="cc-spell-info" hidden></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 6 -->
+        <section class="step-panel" id="step-6" data-step="6">
+            <div>
+                <div class="cc-step-title">Step 6 · HP & Combat Stats</div>
+                <div class="cc-step-desc">Hit Points, Armor Class, speed, and initiative. Suggestions auto-fill from your class, race, and stats.</div>
+            </div>
+            <div class="cc-card">
+                <div class="grid-3">
+                    <div class="cc-field">
+                        <label>Hit Die</label>
+                        <input id="s6-hitdie" type="text" readonly>
+                    </div>
+                    <div class="cc-field">
+                        <label>Max HP</label>
+                        <input id="s6-maxhp" type="number" min="1" oninput="draft._hpTouched = true">
+                    </div>
+                    <div class="cc-field">
+                        <label>Current HP</label>
+                        <input id="s6-curhp" type="number" min="0" oninput="draft._curTouched = true">
+                    </div>
+                    <div class="cc-field">
+                        <label>AC</label>
+                        <input id="s6-ac" type="number" min="1" oninput="draft._acTouched = true">
+                    </div>
+                    <div class="cc-field">
+                        <label>Speed (ft)</label>
+                        <input id="s6-speed" type="number" min="5" oninput="draft._speedTouched = true">
+                    </div>
+                    <div class="cc-field">
+                        <label>Initiative</label>
+                        <input id="s6-init" type="number" readonly>
+                    </div>
+                </div>
+                <div class="cc-hint" id="s6-hint"></div>
+                <div class="cc-hint">HP formula (suggestion): <span id="s6-formula" style="color:var(--secondary);"></span></div>
+            </div>
+        </section>
+
+        <!-- STEP 7 -->
+        <section class="step-panel" id="step-7" data-step="7">
+            <div>
+                <div class="cc-step-title">Step 7 · Features</div>
+                <div class="cc-step-desc">Racial traits, class features, background features — anything your character can do.</div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-row-list" id="s7-features"></div>
+                <div><button class="btn btn-secondary-ghost" type="button" style="flex:0; padding:6px 12px; font-size:0.85rem;" onclick="addFeatureRow()">+ Add feature</button></div>
+            </div>
+        </section>
+
+        <!-- STEP 8 -->
+        <section class="step-panel" id="step-8" data-step="8">
+            <div>
+                <div class="cc-step-title">Step 8 · Traits</div>
+                <div class="cc-step-desc">Personality traits, ideals, bonds, and flaws make your character feel alive.</div>
+            </div>
+            <div class="cc-card">
+                <div class="cc-field"><label>Personality Traits</label><textarea id="s8-personality" rows="3" placeholder="e.g. I always tell the truth, no matter how painful."></textarea></div>
+                <div class="cc-field"><label>Ideals</label><textarea id="s8-ideals" rows="2" placeholder="What drives your character?"></textarea></div>
+                <div class="cc-field"><label>Bonds</label><textarea id="s8-bonds" rows="2" placeholder="Loyalties, people, or places your character cares about."></textarea></div>
+                <div class="cc-field"><label>Flaws</label><textarea id="s8-flaws" rows="2" placeholder="A fear, vice, or weakness."></textarea></div>
+            </div>
+        </section>
+
+        <!-- STEP 9 -->
+        <section class="step-panel" id="step-9" data-step="9">
+            <div>
+                <div class="cc-step-title">Step 9 · Name & Remaining Information</div>
+                <div class="cc-step-desc">Bring it together: give your hero a name and finish the details.</div>
+            </div>
+            <div class="cc-card">
+                <div class="grid-2">
+                    <div class="cc-field">
+                        <label>Character Name *</label>
+                        <input id="s9-name" type="text" placeholder="e.g. Elara">
+                    </div>
+                    <div class="cc-field">
+                        <label>Alignment</label>
+                        <select id="s9-alignment">
+                            <option value="">-- Select --</option>
+                            <option>Lawful Good</option><option>Neutral Good</option><option>Chaotic Good</option>
+                            <option>Lawful Neutral</option><option>True Neutral</option><option>Chaotic Neutral</option>
+                            <option>Lawful Evil</option><option>Neutral Evil</option><option>Chaotic Evil</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="cc-field"><label>Appearance</label><textarea id="s9-appearance" rows="2" placeholder="Height, build, hair, distinguishing marks, style..."></textarea></div>
+                <div class="cc-field"><label>Notes / Backstory</label><textarea id="s9-notes" rows="3" placeholder="A few lines of background story."></textarea></div>
+            </div>
+        </section>
+
+        <!-- STEP 10 -->
+        <section class="step-panel" id="step-10" data-step="10">
+            <div>
+                <div class="cc-step-title">Step 10 · Review — Your Character Card</div>
+                <div class="cc-step-desc">Check everything, then save or export your character.</div>
+            </div>
+            <div id="s10-card"></div>
+            <div class="cc-card" style="align-items:center; text-align:center; gap:8px;">
+                <div class="cc-section-title" style="color:var(--success);">Ready to play!</div>
+                <div class="cc-note">Save keeps the character in your browser (visible on the Character Select page). Export downloads the JSON files to add into <code>data/</code>.</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+                    <button class="btn btn-launch" type="button" style="flex:0 1 200px;" onclick="finishSave()">💾 Save Character</button>
+                    <button class="btn btn-secondary-ghost" type="button" style="flex:0 1 200px;" onclick="finishExport()">⬇ Export JSON files</button>
+                </div>
+            </div>
+        </section>
+
+        <div class="cc-nav">
+            <button class="btn btn-secondary-ghost" id="cc-back" type="button" onclick="goStep(currentStep - 1)">← Back</button>
+            <button class="btn" id="cc-next" type="button" onclick="goStep(currentStep + 1)">Next →</button>
+        </div>
+    </div>
+
+    <!-- Export / Save dialog -->
+    <div class="confirm-overlay hidden" id="dialog-overlay" onclick="if(event.target===this) closeDialog();">
+        <div class="confirm-box">
+            <p id="dialog-title" style="font-weight:800; font-size:1rem;">Character saved</p>
+            <p id="dialog-msg" style="color:var(--text-muted); font-size:0.88rem;"></p>
+            <div id="export-list"></div>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary-ghost" type="button" onclick="closeDialog()">Done</button>
+                <button class="btn" type="button" id="dialog-primary" onclick="closeDialog()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="5e_data/spellbook.js"></script>
+    <script>
+    // ───────────────────────────────────────────────────────────
+    // Data (PHB-based, simplified for beginners)
+    // ───────────────────────────────────────────────────────────
+    let RACES = {
+        '': { name: '— Select —', speed: 30, bonuses: {}, langs: [], notes: '' },
+        human: { name: 'Human', speed: 30, bonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 }, langs: ['Common'], notes: '+1 to all six ability scores' },
+        dwarf: { name: 'Dwarf', speed: 25, bonuses: { con: 2, str: 2 }, langs: ['Common', 'Dwarvish'], notes: '+2 CON, darkvision, speed 25' },
+        elf: { name: 'Elf', speed: 30, bonuses: { dex: 2 }, langs: ['Common', 'Elvish'], notes: '+2 DEX, darkvision' },
+        halfling: { name: 'Halfling', speed: 25, bonuses: { dex: 2 }, langs: ['Common', 'Halfling'], notes: '+2 DEX, Lucky, speed 25' },
+        'half-elf': { name: 'Half-Elf', speed: 30, bonuses: { cha: 2, int: 1, wis: 1 }, langs: ['Common', 'Elvish'], notes: '+2 CHA, +1 to two of your choice' },
+        'half-orc': { name: 'Half-Orc', speed: 30, bonuses: { str: 2, con: 1 }, langs: ['Common', 'Orc'], notes: '+2 STR, +1 CON, darkvision' },
+        tiefling: { name: 'Tiefling', speed: 30, bonuses: { cha: 2, int: 1 }, langs: ['Common', 'Infernal'], notes: '+2 CHA, +1 INT, darkvision' },
+        dragonborn: { name: 'Dragonborn', speed: 30, bonuses: { str: 2, cha: 1 }, langs: ['Common', 'Draconic'], notes: '+2 STR, +1 CHA, breath weapon' },
+        gnome: { name: 'Gnome', speed: 25, bonuses: { int: 2 }, langs: ['Common', 'Gnomish'], notes: '+2 INT, darkvision, speed 25' },
+        goliath: { name: 'Goliath', speed: 30, bonuses: { str: 2, con: 1 }, langs: ['Common', 'Giant'], notes: '+2 STR, +1 CON' },
+        aasimar: { name: 'Aasimar', speed: 30, bonuses: { cha: 2, wis: 1 }, langs: ['Common', 'Celestial'], notes: '+2 CHA, +1 WIS, darkvision' },
+        firbolg: { name: 'Firbolg', speed: 30, bonuses: { wis: 2, str: 1 }, langs: ['Common', 'Elvish', 'Giant'], notes: '+2 WIS, +1 STR' },
+        kenku: { name: 'Kenku', speed: 30, bonuses: { dex: 2, wis: 1 }, langs: ['Common', 'Auran'], notes: '+2 DEX, +1 WIS' },
+        tabaxi: { name: 'Tabaxi', speed: 30, bonuses: { dex: 2, cha: 1 }, langs: ['Common'], notes: '+2 DEX, +1 CHA, darkvision' },
+        tortle: { name: 'Tortle', speed: 30, bonuses: { str: 2, wis: 1 }, langs: ['Common'], notes: '+2 STR, +1 WIS, natural armor 17' },
+        bugbear: { name: 'Bugbear', speed: 30, bonuses: { str: 2, dex: 1 }, langs: ['Common', 'Goblin'], notes: '+2 STR, +1 DEX, darkvision' },
+        goblin: { name: 'Goblin', speed: 30, bonuses: { dex: 2, con: 1 }, langs: ['Common', 'Goblin'], notes: '+2 DEX, +1 CON, darkvision' },
+        hobgoblin: { name: 'Hobgoblin', speed: 30, bonuses: { con: 2, int: 1 }, langs: ['Common', 'Goblin'], notes: '+2 CON, +1 INT, darkvision' },
+        kobold: { name: 'Kobold', speed: 30, bonuses: { dex: 2 }, langs: ['Common', 'Draconic'], notes: '+2 DEX, darkvision' },
+        orc: { name: 'Orc', speed: 30, bonuses: { str: 2, con: 1 }, langs: ['Common', 'Orc'], notes: '+2 STR, +1 CON, darkvision' },
+        'yuan-ti': { name: 'Yuan-Ti Pureblood', speed: 30, bonuses: { cha: 2, int: 1 }, langs: ['Common', 'Abyssal', 'Draconic', 'Infernal'], notes: '+2 CHA, +1 INT, darkvision' }
+    };
+
+    let CLASSES = {
+        '': { name: '— Select —', hitDie: 'd8', saves: [], skillCount: 2, spellAbility: '', notes: '', subclasses: [] },
+        barbarian: { name: 'Barbarian', hitDie: 'd12', saves: ['str', 'con'], skillCount: 2, spellAbility: '', notes: 'd12 hit die', subclasses: ['Berserker', 'Totem Warrior', 'Ancestral Guardian', 'Storm Herald', 'Zealot', 'Beast', 'Wild Magic'] },
+        bard: { name: 'Bard', hitDie: 'd8', saves: ['dex', 'cha'], skillCount: 3, spellAbility: 'cha', notes: 'Spellcaster (CHA)', subclasses: ['College of Lore', 'College of Valor', 'College of Glamour', 'College of Swords', 'College of Whispers', 'College of Creation', 'College of Eloquence'] },
+        cleric: { name: 'Cleric', hitDie: 'd8', saves: ['wis', 'cha'], skillCount: 2, spellAbility: 'wis', notes: 'Spellcaster (WIS), heavy armor', subclasses: ['Knowledge Domain', 'Life Domain', 'Light Domain', 'Nature Domain', 'Tempest Domain', 'Trickery Domain', 'War Domain', 'Forge Domain', 'Grave Domain', 'Order Domain', 'Peace Domain', 'Twilight Domain'] },
+        druid: { name: 'Druid', hitDie: 'd8', saves: ['int', 'wis'], skillCount: 2, spellAbility: 'wis', notes: 'Spellcaster (WIS)', subclasses: ['Circle of the Land', 'Circle of the Moon', 'Circle of Dreams', 'Circle of the Shepherd', 'Circle of Spores', 'Circle of Stars', 'Circle of Wildfire'] },
+        fighter: { name: 'Fighter', hitDie: 'd10', saves: ['str', 'con'], skillCount: 2, spellAbility: '', notes: 'd10 hit die, armor & weapons', subclasses: ['Champion', 'Battle Master', 'Eldritch Knight', 'Arcane Archer', 'Cavalier', 'Samurai', 'Psi Warrior', 'Rune Knight', 'Echo Knight'] },
+        monk: { name: 'Monk', hitDie: 'd8', saves: ['str', 'dex'], skillCount: 2, spellAbility: '', notes: 'd8 hit die, no armor', subclasses: ['Way of the Open Hand', 'Way of Shadow', 'Way of the Four Elements', 'Way of the Drunken Master', 'Way of the Kensei', 'Way of the Sun Soul', 'Way of Mercy', 'Way of the Astral Self', 'Way of the Ascendant Dragon'] },
+        paladin: { name: 'Paladin', hitDie: 'd10', saves: ['wis', 'cha'], skillCount: 2, spellAbility: 'cha', notes: 'Spellcaster (CHA), heavy armor', subclasses: ['Oath of Devotion', 'Oath of the Ancients', 'Oath of Vengeance', 'Oath of Conquest', 'Oath of Redemption', 'Oath of Glory', 'Oath of the Watchers', 'Oathbreaker'] },
+        ranger: { name: 'Ranger', hitDie: 'd10', saves: ['str', 'dex'], skillCount: 3, spellAbility: 'wis', notes: 'Spellcaster (WIS), ranged expert', subclasses: ['Hunter', 'Beast Master', 'Gloom Stalker', 'Horizon Walker', 'Monster Slayer', 'Fey Wanderer', 'Swarmkeeper', 'Drakewarden'] },
+        rogue: { name: 'Rogue', hitDie: 'd8', saves: ['dex', 'int'], skillCount: 4, spellAbility: '', notes: 'd8 hit die, sneak attack', subclasses: ['Thief', 'Assassin', 'Arcane Trickster', 'Mastermind', 'Swashbuckler', 'Inquisitive', 'Scout', 'Phantom', 'Soulknife'] },
+        sorcerer: { name: 'Sorcerer', hitDie: 'd6', saves: ['con', 'cha'], skillCount: 2, spellAbility: 'cha', notes: 'Spellcaster (CHA), d6 hit die', subclasses: ['Draconic Bloodline', 'Wild Magic', 'Divine Soul', 'Shadow Magic', 'Storm Sorcery', 'Aberrant Mind', 'Clockwork Soul', 'Lunar Sorcery'] },
+        warlock: { name: 'Warlock', hitDie: 'd8', saves: ['wis', 'cha'], skillCount: 2, spellAbility: 'cha', notes: 'Spellcaster (CHA), pact magic', subclasses: ['The Archfey', 'The Fiend', 'The Great Old One', 'The Celestial', 'The Hexblade', 'The Fathomless', 'The Genie', 'The Undead'] },
+        wizard: { name: 'Wizard', hitDie: 'd6', saves: ['int', 'wis'], skillCount: 2, spellAbility: 'int', notes: 'Spellcaster (INT), d6 hit die', subclasses: ['School of Abjuration', 'School of Conjuration', 'School of Divination', 'School of Enchantment', 'School of Evocation', 'School of Illusion', 'School of Necromancy', 'School of Transmutation', 'Bladesinging', 'War Magic', 'Chronurgy', 'Graviturgy', 'Order of Scribes'] }
+    };
+
+    let BACKGROUNDS = {
+        '': { name: '— Select —', notes: '' },
+        acolyte: { name: 'Acolyte', notes: 'Ran a temple; gets shelter among faith communities.' },
+        charlatan: { name: 'Charlatan', notes: 'A fake identity & forgery kit; good at cons.' },
+        criminal: { name: 'Criminal', notes: 'Thieves’ tools and a criminal contact.' },
+        entertainer: { name: 'Entertainer', notes: 'Perform in exchange for room & board.' },
+        'folk-hero': { name: 'Folk Hero', notes: 'Common folk adore you; trouble finds you.' },
+        'guild-artisan': { name: 'Guild Artisan', notes: 'Guild membership with reputation & contacts.' },
+        hermit: { name: 'Hermit', notes: 'A discovery or revelation from isolation.' },
+        noble: { name: 'Noble', notes: 'Rank, privilege, and a powerful family name.' },
+        outlander: { name: 'Outlander', notes: 'Wilderness survival; knows your terrain.' },
+        sage: { name: 'Sage', notes: 'Libraries and research; a patron scholar.' },
+        sailor: { name: 'Sailor', notes: 'Ships, the sea, and a free passage finder.' },
+        soldier: { name: 'Soldier', notes: 'Military rank; friends in the army.' },
+        urchin: { name: 'Urchin', notes: 'City streets; knows secret passageways.' }
+    };
+
+    let SKILL_ABILITIES = {
+        acrobatics: 'dex', 'animal-handling': 'wis', arcana: 'int', athletics: 'str',
+        deception: 'cha', history: 'int', insight: 'wis', intimidation: 'cha',
+        investigation: 'int', medicine: 'wis', nature: 'int', perception: 'wis',
+        performance: 'cha', persuasion: 'cha', religion: 'int',
+        'sleight-of-hand': 'dex', stealth: 'dex', survival: 'wis'
+    };
+    let SKILL_LABELS = {
+        acrobatics: 'Acrobatics (DEX)', 'animal-handling': 'Animal Handling (WIS)', arcana: 'Arcana (INT)',
+        athletics: 'Athletics (STR)', deception: 'Deception (CHA)', history: 'History (INT)',
+        insight: 'Insight (WIS)', intimidation: 'Intimidation (CHA)', investigation: 'Investigation (INT)',
+        medicine: 'Medicine (WIS)', nature: 'Nature (INT)', perception: 'Perception (WIS)',
+        performance: 'Performance (CHA)', persuasion: 'Persuasion (CHA)', religion: 'Religion (INT)',
+        'sleight-of-hand': 'Sleight of Hand (DEX)', stealth: 'Stealth (DEX)', survival: 'Survival (WIS)'
+    };
+
+    function skillLabel(short) {
+        return (SKILL_LABELS[short] || short).replace(/\s*\((?:str|dex|con|int|wis|cha)\)\s*$/i, '');
+    }
+
+    let LANGUAGES = ['Common', 'Dwarvish', 'Elvish', 'Giant', 'Gnomish', 'Goblin', 'Halfling', 'Orc',
+        'Abyssal', 'Celestial', 'Draconic', 'Deep Speech', 'Infernal', 'Primordial', 'Sylvan', 'Undercommon'];
+
+    let ARMORS = {
+        '': { name: 'No Armor (Unarmored)', ac: 10, dexCap: null },
+        padded: { name: 'Padded', ac: 11, dexCap: null },
+        leather: { name: 'Leather', ac: 11, dexCap: null },
+        'studded-leather': { name: 'Studded Leather', ac: 12, dexCap: null },
+        hide: { name: 'Hide (medium)', ac: 12, dexCap: 2 },
+        'chain-shirt': { name: 'Chain Shirt (medium)', ac: 13, dexCap: 2 },
+        'scale-mail': { name: 'Scale Mail (medium)', ac: 14, dexCap: 2 },
+        breastplate: { name: 'Breastplate (medium)', ac: 14, dexCap: 2 },
+        'half-plate': { name: 'Half Plate (medium)', ac: 15, dexCap: 2 },
+        'ring-mail': { name: 'Ring Mail (heavy)', ac: 14, dexCap: 0 },
+        'chain-mail': { name: 'Chain Mail (heavy)', ac: 16, dexCap: 0 },
+        splint: { name: 'Splint (heavy)', ac: 17, dexCap: 0 },
+        plate: { name: 'Plate (heavy)', ac: 18, dexCap: 0 },
+        shield: { name: 'Shield (+2 AC)', ac: 2, dexCap: null, shield: true }
+    };
+
+    let WEAPONS = [
+        { id: 'dagger', name: 'Dagger (1d4 finesse)', die: '1d4', finesse: true },
+        { id: 'shortsword', name: 'Shortsword (1d6 finesse)', die: '1d6', finesse: true },
+        { id: 'rapier', name: 'Rapier (1d8 finesse)', die: '1d8', finesse: true },
+        { id: 'longsword', name: 'Longsword (1d8 versatile)', die: '1d8', finesse: false },
+        { id: 'greataxe', name: 'Greataxe (1d12 two-handed)', die: '1d12', finesse: false },
+        { id: 'greatsword', name: 'Greatsword (2d6 heavy)', die: '2d6', finesse: false },
+        { id: 'handaxe', name: 'Handaxe (1d6 light)', die: '1d6', finesse: false },
+        { id: 'longbow', name: 'Longbow (1d8, 150/600)', die: '1d8', finesse: false, ranged: true },
+        { id: 'shortbow', name: 'Shortbow (1d6, 80/320)', die: '1d6', finesse: false, ranged: true },
+        { id: 'light-crossbow', name: 'Light Crossbow (1d8, 80/320)', die: '1d8', finesse: false, ranged: true },
+        { id: 'quarterstaff', name: 'Quarterstaff (1d6)', die: '1d6', finesse: false },
+        { id: 'whip', name: 'Whip (1d4 finesse reach)', die: '1d4', finesse: true },
+        { id: 'battleaxe', name: 'Battleaxe (1d8 versatile)', die: '1d8', finesse: false },
+        { id: 'mace', name: 'Mace (1d6)', die: '1d6', finesse: false }
+    ];
+
+    // ───────────────────────────────────────────────────────────
+    // State
+    // ───────────────────────────────────────────────────────────
+    let ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+    const STORAGE_KEY = 'rpg_characters_v2';
+    let CONSTANTS = { totalSteps: 11 };
+    let currentStep = 0;
+
+    let SYSTEM = '';
+    let SYSTEM_NAME = '';
+    let SYSTEM_TAGLINE = '';
+    let PROF_BONUS = null;
+    let DC_BASE = 8;
+    let SAVES_LABEL = 'Saving Throws';
+    let BONUS_LABEL = 'Proficiency Bonus';
+    let POINT_BUY_POOL = 27;
+
+    // ───────────────────────────────────────────────────────────
+    // Game systems (Step 0) — the wizard adapts its data per system
+    // ───────────────────────────────────────────────────────────
+    const BASE_TABLES = { RACES, CLASSES, BACKGROUNDS, SKILL_ABILITIES, SKILL_LABELS, LANGUAGES, ARMORS, WEAPONS, ABILITY_KEYS };
+
+    // Derived: 2024 rules — races provide no ability score modifiers.
+    const RACES_2024 = {};
+    Object.keys(BASE_TABLES.RACES).forEach(k => {
+        RACES_2024[k] = { ...BASE_TABLES.RACES[k], bonuses: {}, notes: BASE_TABLES.RACES[k].name + ' — no racial ability score modifiers in the 2024 rules.' };
+    });
+
+    // D&D 3.5e — real modifiers (some negative) and classic classes.
+    const RACES_35 = {
+        '': { name: '— Select —', speed: 30, bonuses: {}, langs: ['Common'], notes: '' },
+        human: { name: 'Human', speed: 30, bonuses: {}, langs: ['Common'], notes: 'No modifier — bonus skill points + feat instead.' },
+        dwarf: { name: 'Dwarf', speed: 20, bonuses: { con: 2, cha: -2 }, langs: ['Common', 'Dwarvish'], notes: '+2 CON, −2 CHA, darkvision, speed 20.' },
+        elf: { name: 'Elf', speed: 30, bonuses: { dex: 2, con: -2 }, langs: ['Common', 'Elvish'], notes: '+2 DEX, −2 CON, darkvision, trance.' },
+        gnome: { name: 'Gnome', speed: 20, bonuses: { con: 2, str: -2 }, langs: ['Common', 'Gnomish'], notes: '+2 CON, −2 STR, low-light vision, speed 20.' },
+        'half-elf': { name: 'Half-Elf', speed: 30, bonuses: {}, langs: ['Common', 'Elvish'], notes: 'No modifier; immune to sleep, +2 vs enchantment.' },
+        'half-orc': { name: 'Half-Orc', speed: 30, bonuses: { str: 2, int: -2, cha: -2 }, langs: ['Common', 'Orc'], notes: '+2 STR, −2 INT, −2 CHA, darkvision.' },
+        halfling: { name: 'Halfling', speed: 20, bonuses: { dex: 2, str: -2 }, langs: ['Common', 'Halfling'], notes: '+2 DEX, −2 STR, small size, speed 20.' }
+    };
+    const CLASSES_35 = {
+        '': { name: '— Select —', hitDie: 'd8', saves: [], skillCount: 2, spellAbility: '', notes: '' },
+        barbarian: { name: 'Barbarian', hitDie: 'd12', saves: ['str', 'con'], skillCount: 4, spellAbility: '', notes: 'd12, rage, fast movement.' },
+        bard: { name: 'Bard', hitDie: 'd6', saves: ['dex', 'cha'], skillCount: 6, spellAbility: 'cha', notes: 'Spellcaster (CHA), d6.' },
+        cleric: { name: 'Cleric', hitDie: 'd8', saves: ['con', 'wis'], skillCount: 2, spellAbility: 'wis', notes: 'Spellcaster (WIS), heavy armor.' },
+        druid: { name: 'Druid', hitDie: 'd8', saves: ['con', 'wis'], skillCount: 4, spellAbility: 'wis', notes: 'Spellcaster (WIS), d8.' },
+        fighter: { name: 'Fighter', hitDie: 'd10', saves: ['str', 'con'], skillCount: 2, spellAbility: '', notes: 'd10, bonus feats, full BAB.' },
+        monk: { name: 'Monk', hitDie: 'd8', saves: ['str', 'con', 'wis'], skillCount: 4, spellAbility: '', notes: 'd8, unarmored, ki.' },
+        paladin: { name: 'Paladin', hitDie: 'd10', saves: ['con', 'cha', 'wis'], skillCount: 2, spellAbility: 'cha', notes: 'Spellcaster (CHA), d10, heavy armor.' },
+        ranger: { name: 'Ranger', hitDie: 'd8', saves: ['con', 'dex', 'wis'], skillCount: 6, spellAbility: 'wis', notes: 'Spellcaster (WIS), d8.' },
+        rogue: { name: 'Rogue', hitDie: 'd6', saves: ['con', 'dex'], skillCount: 8, spellAbility: '', notes: 'd6, sneak attack (DEX).' },
+        sorcerer: { name: 'Sorcerer', hitDie: 'd4', saves: ['con', 'cha'], skillCount: 2, spellAbility: 'cha', notes: 'Spellcaster (CHA), d4.' },
+        wizard: { name: 'Wizard', hitDie: 'd4', saves: ['con', 'int'], skillCount: 2, spellAbility: 'int', notes: 'Spellcaster (INT), d4.' }
+    };
+
+    // Pathfinder 2e — simple fixed ancestry boosts (+2/+2).
+    const RACES_PF2 = {
+        '': { name: '— Select —', speed: 30, bonuses: {}, langs: ['Common'], notes: '' },
+        human: { name: 'Human', speed: 30, bonuses: { str: 2, cha: 2 }, langs: ['Common'], notes: '+2 to two ability scores (your choice — simplified).' },
+        dwarf: { name: 'Dwarf', speed: 20, bonuses: { con: 2, wis: 2 }, langs: ['Common', 'Dwarvish'], notes: '+2 CON, +2 WIS, darkvision, speed 20.' },
+        elf: { name: 'Elf', speed: 30, bonuses: { dex: 2, int: 2 }, langs: ['Common', 'Elvish'], notes: '+2 DEX, +2 INT, low-light vision.' },
+        halfling: { name: 'Halfling', speed: 25, bonuses: { dex: 2, cha: 2 }, langs: ['Common', 'Halfling'], notes: '+2 DEX, +2 CHA, small size.' },
+        gnome: { name: 'Gnome', speed: 25, bonuses: { con: 2, cha: 2 }, langs: ['Common', 'Gnomish'], notes: '+2 CON, +2 CHA, low-light vision.' },
+        'half-orc': { name: 'Half-Orc', speed: 30, bonuses: { str: 2, con: 2 }, langs: ['Common', 'Orc'], notes: '+2 STR, +2 CON, darkvision.' },
+        tiefling: { name: 'Tiefling', speed: 30, bonuses: { int: 2, cha: 2 }, langs: ['Common', 'Undercommon'], notes: '+2 INT, +2 CHA, darkvision.' },
+        goblin: { name: 'Goblin', speed: 25, bonuses: { dex: 2, cha: 2 }, langs: ['Common', 'Goblin'], notes: '+2 DEX, +2 CHA, darkvision.' },
+        kobold: { name: 'Kobold', speed: 25, bonuses: { dex: 2, con: 2 }, langs: ['Common', 'Draconic'], notes: '+2 DEX, +2 CON, darkvision.' }
+    };
+
+    // D&D 4e — roles instead of strict class identity.
+    const CLASSES_4E = {
+        '': { name: '— Select —', hitDie: 'd8', saves: [], skillCount: 2, spellAbility: '', notes: '' },
+        fighter: { name: 'Fighter (Defender)', hitDie: 'd10', saves: ['str', 'con'], skillCount: 4, spellAbility: '', notes: 'Defender — keeps enemies on him.' },
+        paladin: { name: 'Paladin (Defender)', hitDie: 'd10', saves: ['con', 'cha'], skillCount: 4, spellAbility: 'cha', notes: 'Defender + off-healer (CHA).' },
+        rogue: { name: 'Rogue (Striker)', hitDie: 'd8', saves: ['dex', 'int'], skillCount: 6, spellAbility: '', notes: 'Striker — sneak attack.' },
+        ranger: { name: 'Ranger (Striker)', hitDie: 'd8', saves: ['str', 'dex'], skillCount: 6, spellAbility: '', notes: 'Striker — twin strike.' },
+        warlock: { name: 'Warlock (Striker)', hitDie: 'd8', saves: ['con', 'cha'], skillCount: 4, spellAbility: 'cha', notes: 'Striker — eldritch blast (CHA).' },
+        cleric: { name: 'Cleric (Leader)', hitDie: 'd8', saves: ['con', 'wis'], skillCount: 4, spellAbility: 'wis', notes: 'Leader — heals and blesses (WIS).' },
+        warlord: { name: 'Warlord (Leader)', hitDie: 'd8', saves: ['con', 'cha'], skillCount: 4, spellAbility: '', notes: 'Leader — tactical buffs.' },
+        wizard: { name: 'Wizard (Controller)', hitDie: 'd6', saves: ['int', 'wis'], skillCount: 4, spellAbility: 'int', notes: 'Controller — area magic (INT).' }
+    };
+
+    // Shadowdark — no proficiency bonus; modifiers only.
+    const CLASSES_SHADOWDARK = {
+        '': { name: '— Select —', hitDie: 'd8', saves: [], skillCount: 2, spellAbility: '', notes: '' },
+        fighter: { name: 'Fighter', hitDie: 'd10', saves: ['str', 'con'], skillCount: 2, spellAbility: '', notes: 'Deals +1 damage per level.' },
+        thief: { name: 'Thief', hitDie: 'd4', saves: ['dex', 'int'], skillCount: 2, spellAbility: '', notes: 'Backstab, pick locks.' },
+        cleric: { name: 'Cleric', hitDie: 'd8', saves: ['con', 'wis'], skillCount: 2, spellAbility: 'wis', notes: 'Holy magic, turn undead.' },
+        wizard: { name: 'Wizard', hitDie: 'd4', saves: ['dex', 'int'], skillCount: 2, spellAbility: 'int', notes: 'Fragile, potent spells.' },
+        ranger: { name: 'Ranger', hitDie: 'd8', saves: ['str', 'dex'], skillCount: 2, spellAbility: '', notes: 'Track and hunt.' }
+    };
+
+    // Call of Cthulhu 7e — d100 skills, different ability set.
+    const CLASSES_COC = {
+        '': { name: '— Select —', hitDie: 'd6', saves: [], skillCount: 6, spellAbility: 'int', notes: '' },
+        investigator: { name: 'Investigator', hitDie: 'd6', saves: ['dex', 'int', 'pow'], skillCount: 8, spellAbility: 'int', notes: 'Skill-based investigator; HP reflect fragility, not heroism.' }
+    };
+    const SKILLS_COC = {
+        accounting: 'int', anthropology: 'int', appraise: 'int', archaeology: 'int', charm: 'cha',
+        climb: 'str', 'credit-rating': 'cha', dodge: 'dex', drive: 'dex', 'fast-talk': 'cha',
+        'fighting-brawl': 'str', firearms: 'dex', intimidate: 'cha', listen: 'pow', occult: 'int',
+        persuade: 'cha', psychology: 'int', 'spot-hidden': 'pow', stealth: 'dex', swim: 'str'
+    };
+    const SKILL_LABELS_COC = {
+        accounting: 'Accounting (INT)', anthropology: 'Anthropology (INT)', appraise: 'Appraise (INT)',
+        archaeology: 'Archaeology (INT)', charm: 'Charm (CHA)', climb: 'Climb (STR)',
+        'credit-rating': 'Credit Rating (CHA)', dodge: 'Dodge (DEX)', drive: 'Drive Auto (DEX)',
+        'fast-talk': 'Fast Talk (CHA)', 'fighting-brawl': 'Fighting (Brawl) (STR)', firearms: 'Firearms (DEX)',
+        intimidate: 'Intimidate (CHA)', listen: 'Listen (POW)', occult: 'Occult (INT)', persuade: 'Persuade (CHA)',
+        psychology: 'Psychology (INT)', 'spot-hidden': 'Spot Hidden (POW)', stealth: 'Stealth (DEX)', swim: 'Swim (STR)'
+    };
+    const LANGUAGES_COC = ['English', 'Mandarin', 'Spanish', 'French', 'German', 'Arabic', 'Russian', 'Greek', 'Latin', 'Egyptian'];
+
+    const SYSTEMS = {
+        'dnd-5e-2014': { name: 'D&D 5e (2014)', group: 'D&D Editions', tagline: 'Classic 5th edition: ability scores, proficiency +2 → +6, spell DC 8 + PB + modifier.' },
+        'dnd-5e-2024': { name: 'D&D 5.5e (2024)', group: 'D&D Editions', tagline: 'Revised 2024 rules: races give no ability modifiers, proficiency up to +6.', profBonus: lvl => Math.min(6, 2 + Math.floor((Number(lvl) || 1) / 4)), races: RACES_2024 },
+        'dnd-3e35': { name: 'D&D 3.5e', group: 'D&D Editions', tagline: 'Classic d20: Base Attack Bonus, Fort/Ref/Will saves, spell DC 10 + level + mod.', races: RACES_35, classes: CLASSES_35, savesLabel: 'Saves (Fort / Ref / Will)', bonusLabel: 'Base Attack Bonus', dcBase: 10, profBonus: lvl => Number(lvl) || 1, pointBuyPool: 32 },
+        'dnd-4e': { name: 'D&D 4e', group: 'D&D Editions', tagline: 'Roles — Defender / Striker / Leader / Controller — with half-level bonuses.', classes: CLASSES_4E, bonusLabel: 'Level Bonus', dcBase: 10, profBonus: lvl => Math.floor((Number(lvl) || 1) / 2) },
+        'dnd-2e': { name: 'AD&D 2e', group: 'D&D Editions', tagline: 'The 1989 classic. Simplified to ascending AC — no THAC0 bookkeeping here.', bonusLabel: 'Combat Bonus', dcBase: 10, profBonus: () => 0 },
+        'dnd-odnd': { name: 'OD&D / AD&D 1e', group: 'D&D Editions', tagline: 'The 1974 vintage. Very freeform — enter what your DM calls for.', bonusLabel: 'Attack Bonus', dcBase: 10, profBonus: () => 0 },
+        'pathfinder-2e': { name: 'Pathfinder 2e', group: 'Other d20', tagline: 'd20 with proficiency tiers: trained = 2 + level, spell DC 10 + proficiency + mod.', races: RACES_PF2, bonusLabel: 'Proficiency', dcBase: 10, profBonus: lvl => 2 + (Number(lvl) || 1) },
+        'shadowdark': { name: 'Shadowdark', group: 'Other d20', tagline: 'Old-school d20: no proficiency bonus, modifiers only, spell DC 10 + ability mod.', classes: CLASSES_SHADOWDARK, bonusLabel: 'Ability Modifier', dcBase: 10, profBonus: () => 0 },
+        'coc-7e': {
+            name: 'Call of Cthulhu 7e', group: 'Non-d20', tagline: 'd100 roll-under horror: stats are STR/CON/DEX/INT/POW/CHA, HP is fragile.',
+            abilityKeys: ['str', 'con', 'dex', 'int', 'pow', 'cha'],
+            races: { '': { name: '— Select —', speed: 30, bonuses: {}, langs: ['English'], notes: '' }, human: { name: 'Human', speed: 30, bonuses: {}, langs: ['English'], notes: 'Every investigator is human. Choose your occupation for skills.' } },
+            classes: CLASSES_COC, skillAbilities: SKILLS_COC, skillLabels: SKILL_LABELS_COC, languages: LANGUAGES_COC,
+            backgrounds: {
+                '': { name: '— Select —', notes: '' },
+                academic: { name: 'Academic', notes: 'Scholar, librarian, doctor — libraries and archives.' },
+                criminal: { name: 'Criminal', notes: 'Thief, gangster, boxer — the bad side of town.' },
+                occultist: { name: 'Occultist', notes: 'Mystic, antique dealer, cultist — too curious for comfort.' },
+                'ex-military': { name: 'Ex-Military', notes: 'Soldier, veteran, survivalist — steady under fire.' },
+                'working-class': { name: 'Working Class', notes: 'Laborer, mechanic, driver — handy and grounded.' }
+            },
+            bonusLabel: 'Skill Bonus', dcBase: 10, profBonus: () => 0
+        },
+        'custom': { name: 'Custom / Other', group: 'Other', tagline: 'Any system at all — 5e-style data as a starting point, edit the JSON freely.' }
+    };
+
+    function selectSystem(key) {
+        if (SYSTEM === key) return;
+        applySystem(key);
+    }
+
+    function applySystem(key) {
+        const s = SYSTEMS[key] || SYSTEMS['dnd-5e-2014'];
+
+        // undo the previous race's ability bonuses, then rebuild for the new ability set
+        if (draft._prevRaceBonuses) {
+            Object.keys(draft._prevRaceBonuses).forEach(k => { draft.abilities[k] = clampAbility((draft.abilities[k] || 10) - draft._prevRaceBonuses[k]); });
+        }
+        draft._prevRaceBonuses = null;
+        const oldAbil = draft.abilities;
+        draft.abilities = {};
+        (s.abilityKeys || BASE_TABLES.ABILITY_KEYS).forEach(k => { draft.abilities[k] = oldAbil[k] || 10; });
+
+        RACES = s.races || BASE_TABLES.RACES;
+        CLASSES = s.classes || BASE_TABLES.CLASSES;
+        BACKGROUNDS = s.backgrounds || BASE_TABLES.BACKGROUNDS;
+        SKILL_ABILITIES = s.skillAbilities || BASE_TABLES.SKILL_ABILITIES;
+        SKILL_LABELS = s.skillLabels || BASE_TABLES.SKILL_LABELS;
+        LANGUAGES = s.languages || BASE_TABLES.LANGUAGES;
+        ARMORS = s.armors || BASE_TABLES.ARMORS;
+        WEAPONS = s.weapons || BASE_TABLES.WEAPONS;
+        ABILITY_KEYS = s.abilityKeys || BASE_TABLES.ABILITY_KEYS;
+        PROF_BONUS = s.profBonus || defaultProfBonus;
+        DC_BASE = s.dcBase != null ? s.dcBase : 8;
+        SAVES_LABEL = s.savesLabel || 'Saving Throws';
+        BONUS_LABEL = s.bonusLabel || 'Proficiency Bonus';
+        POINT_BUY_POOL = s.pointBuyPool || 27;
+        SYSTEM = key;
+        SYSTEM_NAME = s.name;
+        SYSTEM_TAGLINE = s.tagline || '';
+
+        // reset choices that belonged to the old dataset
+        draft.race = ''; draft.class = ''; draft.background = ''; draft.subclass = '';
+        draft.speed = 30; draft.armor = ''; draft.spellAbility = '';
+        draft.attacks = []; draft.weapons = []; draft.spellcaster = false; draft.features = []; draft.spells = []; draft.spellSlots = '';
+        draft._slotsTouched = false;
+        document.getElementById('s1-subclass').value = '';
+        refreshSubclassOptions();
+        document.getElementById('s4-armor').value = '';
+        document.getElementById('s5-spellcaster').checked = false;
+        document.getElementById('s5-spell-box').style.display = 'none';
+        document.getElementById('s5-spell-ability').value = 'int';
+        document.getElementById('s6-speed').value = 30;
+        s3SavesSet = []; s3SkillsSet = []; s3LangsSet = LANGUAGES[0] ? [LANGUAGES[0]] : [];
+
+        // rebuild system-dependent UI
+        document.getElementById('s1-system-hint').innerHTML = 'System: <b>' + esc(SYSTEM_NAME) + '</b> — ' + esc(SYSTEM_TAGLINE);
+        document.getElementById('s1-pb-label').textContent = BONUS_LABEL;
+        document.getElementById('s1-pb').textContent = formatMod(PROF_BONUS(draft.level));
+        document.getElementById('s3-saves-title').textContent = SAVES_LABEL;
+        fillSelect(document.getElementById('s1-race'), RACES, '');
+        fillSelect(document.getElementById('s1-class'), CLASSES, '');
+        fillSelect(document.getElementById('s1-background'), BACKGROUNDS, '');
+        document.getElementById('s1-race-hint').textContent = (RACES[''] || {}).notes || '';
+        document.getElementById('s1-class-hint').textContent = (CLASSES[''] || {}).notes || '';
+        document.getElementById('s1-bg-hint').textContent = '';
+        renderAbilityGrid();
+        fillArmorSelect();
+        fillWeaponsChips();
+        renderItems();
+        renderAttacks();
+        renderFeatures();
+        rebuildStep3();
+        refreshCombatSuggestions();
+
+        document.querySelectorAll('.system-card').forEach(el => el.classList.toggle('active', el.dataset.sys === key));
+        document.getElementById('s0-summary').style.display = 'grid';
+        document.getElementById('s0-current').textContent = SYSTEM_NAME;
+        document.getElementById('s0-tagline').textContent = SYSTEM_TAGLINE;
+    }
+
+    function renderSystemGrid() {
+        const grid = document.getElementById('s0-systems');
+        grid.innerHTML = '';
+        const groups = {};
+        Object.keys(SYSTEMS).forEach(k => { const s = SYSTEMS[k]; (groups[s.group] = groups[s.group] || []).push([k, s]); });
+        Object.keys(groups).forEach(gname => {
+            const lbl = document.createElement('div');
+            lbl.className = 'system-group-label'; lbl.textContent = gname;
+            grid.appendChild(lbl);
+            groups[gname].forEach(([k, s]) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'system-card' + (SYSTEM === k ? ' active' : '');
+                b.dataset.sys = k;
+                b.innerHTML = `<span class="sys-name">${esc(s.name)}</span><span class="sys-tag">${esc(s.tagline)}</span>`;
+                b.onclick = () => selectSystem(k);
+                grid.appendChild(b);
+            });
+        });
+    }
+
+    const ABILITY_META = {
+        str: { name: 'Strength' }, dex: { name: 'Dexterity' }, con: { name: 'Constitution' },
+        int: { name: 'Intelligence' }, wis: { name: 'Wisdom' }, cha: { name: 'Charisma' },
+        pow: { name: 'Power' }, edu: { name: 'Education' }, siz: { name: 'Size' }, app: { name: 'Appearance' }
+    };
+
+    function renderAbilityGrid() {
+        const g = document.getElementById('ability-grid');
+        g.innerHTML = '';
+        ABILITY_KEYS.forEach(k => {
+            const meta = ABILITY_META[k] || { name: k.toUpperCase() };
+            const box = document.createElement('div');
+            box.className = 'cc-ability' + (draft.method === 'standard' ? ' assignable' : '');
+            box.id = 'ab-' + k;
+            const lo = draft.method === 'pointbuy' ? 8 : 1;
+            const hi = draft.method === 'pointbuy' ? 15 : 30;
+            const modCls = 'cc-ability-mod' + (abilityMod(draft.abilities[k]) < 0 ? ' neg' : '');
+            const foot = draft.method === 'standard' ? '<span class="cc-ability-clickhint">click to assign</span>' : '';
+            box.innerHTML = `
+                <div class="cc-ability-head">
+                    <span class="cc-ability-abbr">${esc(k.toUpperCase())}</span>
+                    <span class="cc-ability-name">${esc(meta.name)}</span>
+                </div>
+                <div class="cc-ability-core">
+                    <input id="a-${k}" type="number" min="${lo}" max="${hi}" step="1" value="${Number(draft.abilities[k]) || 10}" oninput="onAbilityInput('${k}')">
+                    <span class="${modCls}" id="m-${k}">${formatMod(abilityMod(draft.abilities[k]))}</span>
+                </div>
+                <div class="cc-ability-foot" id="pf-${k}">${foot}</div>`;
+            if (draft.method === 'standard') {
+                box.addEventListener('click', e => {
+                    if (e.target.tagName !== 'INPUT') assignStd(k);
+                });
+            }
+            g.appendChild(box);
+        });
+        if (draft.method === 'pointbuy') renderPointBuySteppers();
+        updateAbilityMeter();
+    }
+
+    function assignStd(k) {
+        if (draft.method !== 'standard') return;
+        const copy = [15, 14, 13, 12, 10, 8];
+        ABILITY_KEYS.forEach(x => {
+            const v = draft.abilities[x];
+            const i = copy.indexOf(v);
+            if (i > -1) copy.splice(i, 1);
+        });
+        if (!copy.length) return;
+        draft.abilities[k] = copy[0];
+        syncAbilitiesToInputs();
+    }
+
+    function pointBuyUsed() {
+        return ABILITY_KEYS.reduce((s, k) => s + (POINT_BUY_COSTS[draft.abilities[k]] ?? 0), 0);
+    }
+
+    function renderPointBuySteppers() {
+        ABILITY_KEYS.forEach(k => {
+            const f = document.getElementById('pf-' + k);
+            if (!f) return;
+            const v = draft.abilities[k];
+            const cost = POINT_BUY_COSTS[v] ?? 0;
+            const used = pointBuyUsed();
+            f.innerHTML = '';
+            const minus = document.createElement('button');
+            minus.className = 'cc-pbstep'; minus.textContent = '−';
+            minus.disabled = v <= 8;
+            minus.onclick = () => pbStep(k, -1);
+            const val = document.createElement('span');
+            val.className = 'cc-pbcost'; val.textContent = cost + ' pt' + (cost === 1 ? '' : 's');
+            const plus = document.createElement('button');
+            plus.className = 'cc-pbstep'; plus.textContent = '+';
+            const nextCost = POINT_BUY_COSTS[v + 1] ?? 99;
+            plus.disabled = v >= 15 || used + (nextCost - cost) > POINT_BUY_POOL;
+            plus.onclick = () => pbStep(k, 1);
+            f.appendChild(minus); f.appendChild(val); f.appendChild(plus);
+        });
+    }
+
+    function pbStep(key, dir) {
+        if (draft.method !== 'pointbuy') return;
+        const cur = draft.abilities[key];
+        const nv = cur + dir;
+        if (nv < 8 || nv > 15) return;
+        const delta = (POINT_BUY_COSTS[nv] ?? 0) - (POINT_BUY_COSTS[cur] ?? 0);
+        if (pointBuyUsed() + delta > POINT_BUY_POOL) return;
+        draft.abilities[key] = nv;
+        syncAbilitiesToInputs();
+    }
+
+    function updateAbilityMeter() {
+        const el = document.getElementById('ab-total');
+        if (!el) return;
+        const vals = ABILITY_KEYS.map(k => Number(draft.abilities[k]) || 10);
+        const total = vals.reduce((a, b) => a + b, 0);
+        const mods = vals.reduce((a, v) => a + abilityMod(v), 0);
+        el.innerHTML = `Array total <b>${total}</b> · modifiers <em>${formatMod(mods)}</em>`;
+    }
+
+    const draft = {
+        name: '', level: 1, race: '', class: '', subclass: '', background: '', alignment: '', appearance: '', notes: '',
+        abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+        method: 'standard',
+        savingThrows: [], skills: [], languages: ['Common'], otherProficiencies: '',
+        gold: 0, armor: '', shield: false, weapons: [], items: [],
+        attacks: [], spellcaster: false, spellAbility: '', spells: [], spellSlots: '',
+        maxHp: null, currentHp: null, ac: null, speed: 30,
+        features: [],
+        traits: { personality: '', ideals: '', bonds: '', flaws: '' }
+    };
+
+    function abilityMod(s) { return Math.floor(((Number(s) || 10) - 10) / 2); }
+    function defaultProfBonus(level) { return Math.ceil(Math.max(1, Number(level) || 1) / 4) + 1; }
+    PROF_BONUS = defaultProfBonus;
+
+    // ───────────────────────────────────────────────────────────
+    // Setup selects / chips
+    // ───────────────────────────────────────────────────────────
+    function fillSelect(el, map, selectedKey) {
+        el.innerHTML = '';
+        Object.keys(map).forEach(k => {
+            const opt = document.createElement('option');
+            opt.value = k;
+            opt.textContent = map[k].name;
+            if (k === selectedKey) opt.selected = true;
+            el.appendChild(opt);
+        });
+    }
+
+    let s3SavesSet = [], s3SkillsSet = [], s3LangsSet = ['Common'];
+
+    // ───────────────────────────────────────────────────────────
+    // Step 1 behavior
+    // ───────────────────────────────────────────────────────────
+    function applyRace() {
+        const key = document.getElementById('s1-race').value;
+        const r = RACES[key] || RACES[''];
+        document.getElementById('s1-race-hint').textContent = r.notes;
+        // apply racial bonuses: reset abilities that were from previous race? We add bonuses to current scores.
+        draft.race = key;
+        // remove previous race bonuses by subtracting old draft race bonuses
+        if (draft._prevRaceBonuses) {
+            Object.keys(draft._prevRaceBonuses).forEach(k => {
+                draft.abilities[k] = clampAbility((draft.abilities[k] || 10) - draft._prevRaceBonuses[k]);
+            });
+        }
+        Object.keys(r.bonuses).forEach(k => {
+            draft.abilities[k] = clampAbility((draft.abilities[k] || 10) + r.bonuses[k]);
+        });
+        draft._prevRaceBonuses = { ...r.bonuses };
+        syncAbilitiesToInputs();
+        // languages
+        s3LangsSet = Array.from(new Set([...r.langs, 'Common']));
+        rebuildStep3();
+        // speed (if not manually touched)
+        if (!draft._speedTouched) draft.speed = r.speed;
+        document.getElementById('s6-speed').value = draft.speed;
+    }
+
+    function refreshSubclassOptions() {
+        const sel = document.getElementById('s1-subclass');
+        const custom = document.getElementById('s1-subclass-custom');
+        const c = CLASSES[draft.class] || CLASSES[''];
+        sel.innerHTML = '';
+        const blank = new Option('— None —', '', false, false);
+        sel.appendChild(blank);
+        (c.subclasses || []).forEach(name => sel.appendChild(new Option(name, name, false, false)));
+        const customOpt = new Option('Other…', '__custom__', false, false);
+        sel.appendChild(customOpt);
+        sel.value = '';
+        custom.value = '';
+        custom.style.display = 'none';
+    }
+
+    function onSubclassChanged() {
+        const sel = document.getElementById('s1-subclass');
+        const custom = document.getElementById('s1-subclass-custom');
+        if (sel.value === '__custom__') {
+            custom.style.display = '';
+            custom.focus();
+        } else {
+            custom.style.display = 'none';
+        }
+    }
+
+    function applyClass() {
+        const key = document.getElementById('s1-class').value;
+        const c = CLASSES[key] || CLASSES[''];
+        document.getElementById('s1-class-hint').textContent = c.notes;
+        draft.class = key;
+        refreshSubclassOptions();
+        document.getElementById('s6-hitdie').value = c.hitDie;
+        // default saving throws
+        s3SavesSet = c.saves.slice();
+        rebuildStep3();
+        // show spellcasting section based on whether the class can cast
+        const sc = document.getElementById('s5-spellcaster');
+        if (sc.checked !== !!c.spellAbility) { sc.checked = !!c.spellAbility; spellcasterChanged(); }
+        if (c.spellAbility) {
+            document.getElementById('s5-spell-ability').value = c.spellAbility;
+            refreshStep5();
+            autoSpellSlots();
+        }
+        refreshCombatSuggestions();
+    }
+
+    function levelChanged() {
+        const lvl = Math.max(1, Math.min(20, Number(document.getElementById('s1-level').value) || 1));
+        draft.level = lvl;
+        document.getElementById('s1-pb').textContent = formatMod(PROF_BONUS(lvl));
+        refreshCombatSuggestions();
+        if (draft.spellcaster) renderSpellList();
+    }
+
+    function applyBackground() {
+        const key = document.getElementById('s1-background').value;
+        draft.background = key;
+        document.getElementById('s1-bg-hint').textContent = key && BACKGROUNDS[key] ? BACKGROUNDS[key].notes : '';
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // Step 2 behavior
+    // ───────────────────────────────────────────────────────────
+    function clampAbility(v) { return Math.max(1, Math.min(30, v)); }
+
+    let _pbWarnTimer = null;
+    function pbWarn(msg) {
+        const w = document.getElementById('pb-warn');
+        if (!w) return;
+        w.textContent = msg;
+        w.classList.add('on');
+        clearTimeout(_pbWarnTimer);
+        _pbWarnTimer = setTimeout(() => { w.textContent = ''; w.classList.remove('on'); }, 3500);
+    }
+
+    function onAbilityInput(key) {
+        const el = document.getElementById('a-' + key);
+        let v = Number(el.value);
+        if (!Number.isFinite(v)) v = 10;
+        let rejected = null;
+        // Point Buy enforces score range + budget on real edits; programmatic
+        // syncs (race bonuses) may legitimately end above 15.
+        if (!draft._syncing && draft.method === 'pointbuy') {
+            v = Math.floor(v);
+            if (v < 8 || v > 15) {
+                rejected = 'Point Buy scores are 8–15.';
+            } else {
+                const prev = draft.abilities[key];
+                const used = pointBuyUsed();
+                const delta = (POINT_BUY_COSTS[v] ?? 0) - (POINT_BUY_COSTS[prev] ?? 0);
+                if (used + delta > POINT_BUY_POOL) {
+                    rejected = 'Needs ' + delta + ' pts — only ' + Math.max(0, POINT_BUY_POOL - used) + ' left.';
+                }
+            }
+        } else {
+            v = Math.max(1, Math.min(30, Math.floor(v)));
+        }
+        if (rejected) {
+            v = draft.abilities[key];
+            el.value = v;
+            pbWarn(rejected);
+        } else {
+            draft.abilities[key] = v;
+            el.value = v;
+        }
+        const modEl = document.getElementById('m-' + key);
+        if (modEl) {
+            modEl.textContent = formatMod(abilityMod(v));
+            modEl.classList.toggle('neg', abilityMod(v) < 0);
+        }
+        updateAbilityMeter();
+        if (draft.method === 'pointbuy') updatePointBuyInfo();
+        else if (draft.method === 'standard') renderMethodActions();
+    }
+
+    function syncAbilitiesToInputs() {
+        draft._syncing = true;
+        ABILITY_KEYS.forEach(k => {
+            const el = document.getElementById('a-' + k);
+            el.value = draft.abilities[k];
+            el.dispatchEvent(new Event('input'));
+        });
+        draft._syncing = false;
+        // also update roll/trend labels
+        renderMethodActions();
+        refreshCombatSuggestions();
+        refreshStep5();
+    }
+
+    function setMethod(m) {
+        if (m === draft.method) { document.querySelectorAll('.method-tab').forEach(t => t.classList.toggle('active', t.dataset.m === m)); return; }
+        draft.method = m;
+        document.querySelectorAll('.method-tab').forEach(t => t.classList.toggle('active', t.dataset.m === m));
+        // reset generation state: scores back to a clean baseline, then reapply racial bonuses
+        ABILITY_KEYS.forEach(k => { draft.abilities[k] = 10; });
+        if (draft._prevRaceBonuses) {
+            Object.keys(draft._prevRaceBonuses).forEach(k => { draft.abilities[k] = clampAbility(draft.abilities[k] + draft._prevRaceBonuses[k]); });
+        }
+        renderMethodActions();
+        renderAbilityGrid();
+        if (m === 'standard') applyStandardArray();
+        if (m === 'pointbuy') updatePointBuyInfo();
+    }
+
+    function applyStandardArray() {
+        const arr = [15, 14, 13, 12, 10, 8];
+        ABILITY_KEYS.forEach((k, i) => { draft.abilities[k] = arr[i]; });
+        if (draft._prevRaceBonuses) {
+            Object.keys(draft._prevRaceBonuses).forEach(k => { draft.abilities[k] = clampAbility(draft.abilities[k] + draft._prevRaceBonuses[k]); });
+        }
+        syncAbilitiesToInputs();
+    }
+
+    function rollAbilities() {
+        const rollOne = () => {
+            const dice = [1, 1, 1, 1].map(() => 1 + Math.floor(Math.random() * 6)).sort((a, b) => a - b);
+            return dice.slice(1).reduce((a, b) => a + b, 0);
+        };
+        const arr = [0, 1, 2, 3, 4, 5].map(rollOne).sort((a, b) => b - a);
+        ABILITY_KEYS.forEach((k, i) => { draft.abilities[k] = arr[i]; });
+        syncAbilitiesToInputs();
+    }
+
+    const POINT_BUY_COSTS = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+    function renderPointBuy() {
+        const bar = document.getElementById('method-bar');
+        bar.innerHTML = '';
+        const meter = document.createElement('div');
+        meter.className = 'pb-meter';
+        const track = document.createElement('div');
+        track.className = 'pb-track';
+        const fill = document.createElement('div');
+        fill.className = 'pb-fill'; fill.id = 'pb-fill';
+        track.appendChild(fill);
+        const label = document.createElement('span');
+        label.className = 'pb-label'; label.id = 'pb-label';
+        meter.appendChild(track); meter.appendChild(label);
+        bar.appendChild(meter);
+        const warn = document.createElement('span');
+        warn.className = 'pb-warn'; warn.id = 'pb-warn';
+        bar.appendChild(warn);
+        const note = document.createElement('span');
+        note.className = 'method-note';
+        note.textContent = 'Use the − / + buttons on each card. Scores 8–15, costs shown below each score.';
+        bar.appendChild(note);
+        renderPointBuySteppers();
+        updatePointBuyInfo();
+    }
+
+    function updatePointBuyInfo() {
+        const used = pointBuyUsed();
+        const rem = Math.max(0, POINT_BUY_POOL - used);
+        const label = document.getElementById('pb-label');
+        if (label) label.textContent = used + ' / ' + POINT_BUY_POOL + ' pts · ' + rem + ' left';
+        const fill = document.getElementById('pb-fill');
+        if (fill) {
+            const frac = Math.min(1, used / POINT_BUY_POOL);
+            fill.style.width = Math.round(frac * 100) + '%';
+            fill.style.background = frac >= 1 ? '#ef4444' : frac > 0.75 ? '#f59e0b' : '#22c55e';
+        }
+        renderPointBuySteppers();
+    }
+
+    function renderMethodActions() {
+        const bar = document.getElementById('method-bar');
+        bar.innerHTML = '';
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        if (draft.method === 'standard') {
+            const poolWrap = document.createElement('div');
+            poolWrap.className = 'ab-pool';
+            const copy = [15, 14, 13, 12, 10, 8];
+            ABILITY_KEYS.forEach(x => {
+                const v = draft.abilities[x];
+                const i = copy.indexOf(v);
+                if (i > -1) copy.splice(i, 1);
+            });
+            copy.forEach(v => {
+                const c = document.createElement('span');
+                c.className = 'ab-poolchip'; c.textContent = String(v);
+                c.title = 'Not yet assigned — click a card to place it';
+                poolWrap.appendChild(c);
+            });
+            actions.appendChild(poolWrap);
+            bar.appendChild(actions);
+            const note = document.createElement('span');
+            note.className = 'method-note';
+            note.textContent = copy.length ? 'Click an ability card to assign the next value, or type directly.' : 'All array values assigned — edit any card; switch methods to reset scores.';
+            bar.appendChild(note);
+        } else if (draft.method === 'roll') {
+            const b = document.createElement('button');
+            b.className = 'btn btn-secondary-ghost'; b.style.flex = '0'; b.style.padding = '6px 12px'; b.textContent = '🎲 Roll 4d6 drop lowest';
+            b.onclick = rollAbilities;
+            actions.appendChild(b);
+            bar.appendChild(actions);
+            const note = document.createElement('span');
+            note.className = 'method-note';
+            note.textContent = 'Roll six times, drop the lowest die each time. Result sorted high → low. Roll again any time.';
+            bar.appendChild(note);
+        } else if (draft.method === 'pointbuy') {
+            renderPointBuy();
+        } else {
+            const note = document.createElement('span');
+            note.className = 'method-note';
+            note.textContent = 'Type any scores from 1–30. Modifiers, totals, and derived stats update live.';
+            bar.appendChild(note);
+        }
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // Step 3
+    // ───────────────────────────────────────────────────────────
+    function rebuildStep3() {
+        document.getElementById('s3-saves').innerHTML = '';
+        ABILITY_KEYS.forEach(k => {
+            const isOn = s3SavesSet.includes(k);
+            const chip = document.createElement('label');
+            chip.className = 'chip' + (isOn ? ' on' : '');
+            const box = document.createElement('input');
+            box.type = 'checkbox'; box.checked = isOn;
+            box.onchange = () => {
+                if (box.checked) s3SavesSet.push(k); else s3SavesSet = s3SavesSet.filter(x => x !== k);
+                chip.classList.toggle('on', box.checked);
+                draft.savingThrows = s3SavesSet.slice();
+            };
+            chip.appendChild(box);
+            chip.appendChild(document.createTextNode(k.toUpperCase()));
+            document.getElementById('s3-saves').appendChild(chip);
+        });
+
+        const skillsEl = document.getElementById('s3-skills');
+        skillsEl.innerHTML = '';
+        const abilNames = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
+        const skillGroups = {};
+        Object.keys(SKILL_ABILITIES).forEach(sk => {
+            const ab = SKILL_ABILITIES[sk];
+            (skillGroups[ab] = skillGroups[ab] || []).push(sk);
+        });
+        ABILITY_KEYS.forEach(ab => {
+            const list = skillGroups[ab];
+            if (!list || !list.length) return;
+            const group = document.createElement('div');
+            group.className = 'cc-skill-group';
+            const title = document.createElement('div');
+            title.className = 'cc-skill-group-title';
+            const abName = abilNames[ab] || ab.toUpperCase();
+            const mod = formatMod(abilityMod(draft.abilities[ab]));
+            title.innerHTML = '<b>' + ab.toUpperCase() + '</b><span>' + escHtml(abName) + '</span><em>' + mod + '</em>';
+            const rows = document.createElement('div');
+            rows.className = 'chip-row';
+            list.forEach(sk => {
+                const isOn = s3SkillsSet.includes(sk);
+                const chip = document.createElement('label');
+                chip.className = 'chip' + (isOn ? ' on' : '');
+                const box = document.createElement('input');
+                box.type = 'checkbox'; box.checked = isOn;
+                box.onchange = () => {
+                    if (box.checked) s3SkillsSet.push(sk); else s3SkillsSet = s3SkillsSet.filter(x => x !== sk);
+                    chip.classList.toggle('on', box.checked);
+                    draft.skills = s3SkillsSet.slice();
+                };
+                chip.appendChild(box);
+                chip.appendChild(document.createTextNode(skillLabel(sk)));
+                rows.appendChild(chip);
+            });
+            group.appendChild(title);
+            group.appendChild(rows);
+            skillsEl.appendChild(group);
+        });
+
+        document.getElementById('s3-languages').innerHTML = '';
+        LANGUAGES.forEach(lang => {
+            const isOn = s3LangsSet.includes(lang);
+            const chip = document.createElement('label');
+            chip.className = 'chip' + (isOn ? ' on' : '');
+            const box = document.createElement('input');
+            box.type = 'checkbox'; box.checked = isOn;
+            box.onchange = () => {
+                if (box.checked) s3LangsSet.push(lang); else s3LangsSet = s3LangsSet.filter(x => x !== lang);
+                chip.classList.toggle('on', box.checked);
+                draft.languages = s3LangsSet.slice();
+            };
+            chip.appendChild(box);
+            chip.appendChild(document.createTextNode(lang));
+            document.getElementById('s3-languages').appendChild(chip);
+        });
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // Step 4
+    // ───────────────────────────────────────────────────────────
+    function fillArmorSelect() {
+        const sel = document.getElementById('s4-armor');
+        sel.innerHTML = '';
+        Object.keys(ARMORS).forEach(k => {
+            const opt = document.createElement('option');
+            opt.value = k; opt.textContent = ARMORS[k].name;
+            sel.appendChild(opt);
+        });
+    }
+
+    function armorChanged() {
+        const key = document.getElementById('s4-armor').value;
+        const a = ARMORS[key];
+        draft.armor = key;
+        const dexMod = abilityMod(draft.abilities.dex);
+        let hint = '';
+        if (a && a.shield) {
+            hint = 'A shield adds +2 to AC while equipped.';
+        } else if (key === '') {
+            const unarmed = [];
+            if (draft.class === 'monk') unarmed.push('Monk: 10 + DEX + WIS');
+            if (draft.class === 'barbarian') unarmed.push('Barbarian: 10 + DEX + CON');
+            if (draft.race === 'tortle') unarmed.push('Tortle natural shell: 17 (no DEX)');
+            hint = `No Armor: AC 10 + DEX${unarmed.length ? ' · ' + unarmed.join(' / ') : ''}.`;
+        } else if (a) {
+            hint = `AC ${a.ac} + DEX${a.dexCap !== null ? ' (max ' + a.dexCap + ')' : ''}.`;
+        }
+        document.getElementById('s4-armor-hint').textContent = hint;
+        refreshCombatSuggestions();
+    }
+
+    function fillWeaponsChips() {
+        const c = document.getElementById('s4-weapons');
+        c.innerHTML = '';
+        WEAPONS.forEach(w => {
+            const isOn = draft.weapons.includes(w.id);
+            const chip = document.createElement('label');
+            chip.className = 'chip' + (isOn ? ' on' : '');
+            const box = document.createElement('input');
+            box.type = 'checkbox'; box.checked = isOn;
+            box.onchange = () => {
+                if (box.checked) draft.weapons.push(w.id); else draft.weapons = draft.weapons.filter(x => x !== w.id);
+                chip.classList.toggle('on', box.checked);
+                weaponsToAttacks();
+                refreshStep5();
+            };
+            chip.appendChild(box);
+            chip.appendChild(document.createTextNode(w.name));
+            c.appendChild(chip);
+        });
+    }
+
+    function renderItems() {
+        const list = document.getElementById('s4-items');
+        list.innerHTML = '';
+        draft.items.forEach((it, i) => {
+            const row = document.createElement('div');
+            row.className = 'cc-row';
+            row.innerHTML = `<input value="${escAttr(it.name)}" placeholder="Item name" data-i="${i}" data-k="name">
+                <input class="cc-sm" type="number" min="0" value="${it.qty || 1}" placeholder="Qty" data-i="${i}" data-k="qty">
+                <button class="btn btn-delete" type="button" style="flex:0; padding:4px 10px;" onclick="removeRow('s4-items', ${i}, 'item')">✕</button>`;
+            list.appendChild(row);
+        });
+        list.addEventListener('input', e => {
+            const el = e.target;
+            const i = Number(el.dataset.i);
+            const k = el.dataset.k;
+            if (!draft.items[i]) return;
+            draft.items[i][k] = k === 'qty' ? Number(el.value) || 1 : el.value;
+        });
+    }
+
+    function addItemRow() { draft.items.push({ name: '', qty: 1 }); renderItems(); }
+
+    // Gear reference picker
+    const GEAR_MASTER = [
+        { name: 'Backpack', cat: 'Adventuring Gear', cost: 2, wt: 5 },
+        { name: 'Bedroll', cat: 'Adventuring Gear', cost: 1, wt: 7 },
+        { name: 'Blanket', cat: 'Adventuring Gear', cost: 0.5, wt: 3 },
+        { name: 'Block and tackle', cat: 'Adventuring Gear', cost: 1, wt: 5 },
+        { name: 'Caltrops', cat: 'Adventuring Gear', cost: 1, wt: 2 },
+        { name: 'Candle', cat: 'Adventuring Gear', cost: 0.01, wt: 0 },
+        { name: 'Chain (10 ft)', cat: 'Adventuring Gear', cost: 5, wt: 10 },
+        { name: 'Climber\u2019s kit', cat: 'Gear Kits', cost: 25, wt: 12 },
+        { name: 'Crowbar', cat: 'Adventuring Gear', cost: 2, wt: 5 },
+        { name: 'Fishing tackle', cat: 'Adventuring Gear', cost: 1, wt: 4 },
+        { name: 'Grappling hook', cat: 'Adventuring Gear', cost: 2, wt: 4 },
+        { name: 'Hammer', cat: 'Adventuring Gear', cost: 1, wt: 3 },
+        { name: 'Hempen rope (50 ft)', cat: 'Adventuring Gear', cost: 1, wt: 10 },
+        { name: 'Silk rope (50 ft)', cat: 'Adventuring Gear', cost: 10, wt: 5 },
+        { name: 'Lantern, bullseye', cat: 'Light', cost: 10, wt: 2 },
+        { name: 'Lantern, hooded', cat: 'Light', cost: 5, wt: 2 },
+        { name: 'Torch', cat: 'Light', cost: 0.01, wt: 1 },
+        { name: 'Lock', cat: 'Adventuring Gear', cost: 10, wt: 1 },
+        { name: 'Magnifying glass', cat: 'Adventuring Gear', cost: 100, wt: 0 },
+        { name: 'Manacles', cat: 'Adventuring Gear', cost: 2, wt: 6 },
+        { name: 'Mirror, steel', cat: 'Adventuring Gear', cost: 5, wt: 0.5 },
+        { name: 'Piton', cat: 'Adventuring Gear', cost: 0.05, wt: 0.25 },
+        { name: 'Pole (10 ft)', cat: 'Adventuring Gear', cost: 0.05, wt: 7 },
+        { name: 'Pot, iron', cat: 'Adventuring Gear', cost: 2, wt: 10 },
+        { name: 'Ram, portable', cat: 'Adventuring Gear', cost: 4, wt: 35 },
+        { name: 'Ball bearings (bag of 1,000)', cat: 'Adventuring Gear', cost: 1, wt: 2 },
+        { name: 'Iron spikes (10)', cat: 'Adventuring Gear', cost: 1, wt: 5 },
+        { name: 'Oil (flask)', cat: 'Adventuring Gear', cost: 0.1, wt: 1 },
+        { name: 'Rations (1 day)', cat: 'Food & Drink', cost: 0.5, wt: 2 },
+        { name: 'Signal whistle', cat: 'Adventuring Gear', cost: 0.05, wt: 0 },
+        { name: 'Soap', cat: 'Adventuring Gear', cost: 0.02, wt: 0 },
+        { name: 'Spade', cat: 'Adventuring Gear', cost: 2, wt: 5 },
+        { name: 'Spyglass', cat: 'Adventuring Gear', cost: 1000, wt: 1 },
+        { name: 'Tent, two-person', cat: 'Adventuring Gear', cost: 2, wt: 20 },
+        { name: 'Tinderbox', cat: 'Adventuring Gear', cost: 0.5, wt: 1 },
+        { name: 'Waterskin', cat: 'Adventuring Gear', cost: 0.2, wt: 5 },
+        { name: 'Whetstone', cat: 'Adventuring Gear', cost: 0.01, wt: 1 },
+        { name: 'Barrel', cat: 'Container', cost: 2, wt: 70 },
+        { name: 'Bucket', cat: 'Container', cost: 0.05, wt: 2 },
+        { name: 'Chest', cat: 'Container', cost: 5, wt: 25 },
+        { name: 'Flask', cat: 'Container', cost: 0.02, wt: 1 },
+        { name: 'Jug', cat: 'Container', cost: 0.02, wt: 4 },
+        { name: 'Pouch', cat: 'Container', cost: 0.5, wt: 1 },
+        { name: 'Sack', cat: 'Container', cost: 0.01, wt: 0.5 },
+        { name: 'Vial', cat: 'Container', cost: 1, wt: 0 },
+        { name: 'Component pouch', cat: 'Container', cost: 25, wt: 2 },
+        { name: 'Abacus', cat: 'Tools', cost: 2, wt: 2 },
+        { name: 'Alchemist\u2019s supplies', cat: 'Tools', cost: 50, wt: 8 },
+        { name: 'Brewer\u2019s supplies', cat: 'Tools', cost: 20, wt: 9 },
+        { name: 'Carpenter\u2019s tools', cat: 'Tools', cost: 8, wt: 6 },
+        { name: 'Cartographer\u2019s tools', cat: 'Tools', cost: 15, wt: 6 },
+        { name: 'Cobbler\u2019s tools', cat: 'Tools', cost: 5, wt: 5 },
+        { name: 'Cook\u2019s utensils', cat: 'Tools', cost: 1, wt: 8 },
+        { name: 'Smith\u2019s tools', cat: 'Tools', cost: 20, wt: 8 },
+        { name: 'Tinker\u2019s tools', cat: 'Tools', cost: 50, wt: 10 },
+        { name: 'Thieves\u2019 tools', cat: 'Tools', cost: 25, wt: 1 },
+        { name: 'Gaming set', cat: 'Tools', cost: 1, wt: 0 },
+        { name: 'Musical instrument', cat: 'Tools', cost: 5, wt: 2 },
+        { name: 'Navigator\u2019s tools', cat: 'Tools', cost: 25, wt: 2 },
+        { name: 'Herbalism kit', cat: 'Gear Kits', cost: 5, wt: 3 },
+        { name: 'Healer\u2019s kit', cat: 'Gear Kits', cost: 5, wt: 3 },
+        { name: 'Disguise kit', cat: 'Gear Kits', cost: 25, wt: 3 },
+        { name: 'Forgery kit', cat: 'Gear Kits', cost: 15, wt: 5 },
+        { name: 'Poisoner\u2019s kit', cat: 'Gear Kits', cost: 50, wt: 2 },
+        { name: 'Hunting trap', cat: 'Adventuring Gear', cost: 5, wt: 25 },
+        { name: 'Holy symbol (amulet)', cat: 'Adventuring Gear', cost: 5, wt: 1 },
+        { name: 'Adventurer\u2019s pack', cat: 'Packs', cost: 12, wt: 0 },
+        { name: 'Diplomat\u2019s pack', cat: 'Packs', cost: 39, wt: 0 },
+        { name: 'Dungeoneer\u2019s pack', cat: 'Packs', cost: 12, wt: 0 },
+        { name: 'Entertainer\u2019s pack', cat: 'Packs', cost: 40, wt: 0 },
+        { name: 'Explorer\u2019s pack', cat: 'Packs', cost: 10, wt: 0 },
+        { name: 'Scholar\u2019s pack', cat: 'Packs', cost: 40, wt: 0 },
+        { name: 'Common clothes', cat: 'Clothing', cost: 0.5, wt: 3 },
+        { name: 'Costume', cat: 'Clothing', cost: 5, wt: 4 },
+        { name: 'Fine clothes', cat: 'Clothing', cost: 15, wt: 6 },
+        { name: 'Robes', cat: 'Clothing', cost: 1, wt: 4 },
+        { name: 'Traveler\u2019s clothes', cat: 'Clothing', cost: 2, wt: 4 },
+        { name: 'Ale (gallon)', cat: 'Food & Drink', cost: 0.2, wt: 8 },
+        { name: 'Bread (loaf)', cat: 'Food & Drink', cost: 0.02, wt: 0.5 },
+        { name: 'Cheese (wedge)', cat: 'Food & Drink', cost: 0.1, wt: 0.5 },
+        { name: 'Wine (bottle)', cat: 'Food & Drink', cost: 2, wt: 1.5 },
+        { name: 'Arrows (20)', cat: 'Ammunition', cost: 1, wt: 1 },
+        { name: 'Crossbow bolts (20)', cat: 'Ammunition', cost: 1, wt: 1.5 },
+        { name: 'Sling stones', cat: 'Ammunition', cost: 0, wt: 0 },
+        { name: 'Quiver', cat: 'Ammunition', cost: 1, wt: 1 },
+        { name: 'Donkey / Mule', cat: 'Mounts', cost: 8, wt: 0 },
+        { name: 'Horse (riding)', cat: 'Mounts', cost: 75, wt: 0 },
+        { name: 'Pony', cat: 'Mounts', cost: 30, wt: 0 },
+        { name: 'Bit and bridle', cat: 'Mounts', cost: 2, wt: 1 },
+        { name: 'Saddle, riding', cat: 'Mounts', cost: 10, wt: 25 },
+        { name: 'Feed (per day)', cat: 'Mounts', cost: 0.05, wt: 10 }
+    ];
+
+    function fmtGearCost(gp) {
+        if (gp >= 1) return (gp % 1 === 0 ? gp : gp.toFixed(1)) + ' gp';
+        const sp = Math.round(gp * 10);
+        if (sp >= 1) return sp + ' sp';
+        return Math.round(gp * 100) + ' cp';
+    }
+
+    function renderGearPicker() {
+        const sel = document.getElementById('s4-gear-cat');
+        if (!sel) return;
+        const cats = Array.from(new Set(GEAR_MASTER.map(g => g.cat))).sort();
+        sel.innerHTML = '<option value="">All categories</option>' +
+            cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+        renderGearList();
+    }
+
+    function gearFilter() { renderGearList(); }
+
+    function renderGearList() {
+        const box = document.getElementById('gear-results');
+        if (!box) return;
+        const q = (document.getElementById('s4-item-filter').value || '').trim().toLowerCase();
+        const cat = document.getElementById('s4-gear-cat').value;
+        const hits = GEAR_MASTER.filter(g => (!cat || g.cat === cat) && (!q || g.name.toLowerCase().includes(q)));
+        box.innerHTML = '';
+        if (!hits.length) {
+            box.innerHTML = '<div class="gear-empty">No matching gear.</div>';
+            return;
+        }
+        hits.forEach(g => {
+            const inInv = draft.items.filter(it => it.name === g.name).reduce((s, it) => s + (it.qty || 1), 0);
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'gear-item';
+            b.innerHTML = `
+                <span class="gi-info">
+                    <span class="gi-name">${esc(g.name)}</span>
+                    <span class="gi-meta">${fmtGearCost(g.cost)} · ${g.wt === 0 ? '\u2014' : g.wt + ' lb'}</span>
+                </span>
+                <span class="gi-right">${inInv ? `<span class="gi-added">\u00d7${inInv}</span>` : ''}</span>`;
+            b.onclick = () => addGearItem(g.name);
+            box.appendChild(b);
+        });
+    }
+
+    function addGearItem(name) {
+        const hit = draft.items.find(it => it.name === name);
+        if (hit) hit.qty = (hit.qty || 1) + 1;
+        else draft.items.push({ name: name, qty: 1 });
+        renderItems();
+        renderGearList();
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // Step 5
+    // ───────────────────────────────────────────────────────────
+    function attackBonus(abilityKey, prof = true, extra = 0) {
+        let b = 0;
+        if (prof) b += draft.profBonus;
+        b += abilityMod(draft.abilities[abilityKey]);
+        b += Number(extra) || 0;
+        return b;
+    }
+
+    function spellMod() {
+        const el = document.getElementById('s5-spell-ability');
+        const key = el ? el.value : (draft.spellAbility || '');
+        return abilityMod(draft.abilities[key] || 10);
+    }
+
+    function refreshStep5() {
+        draft.profBonus = PROF_BONUS(draft.level);
+        renderAttacks();
+        // spell box fields
+        if (draft.spellcaster) {
+            autoSpellSlots();
+            const dc = DC_BASE + draft.profBonus + spellMod();
+            const atk = draft.profBonus + spellMod();
+            document.getElementById('s5-spell-dc').value = dc;
+            document.getElementById('s5-spell-atk').value = formatMod(atk);
+        }
+    }
+
+    function abilityLabel(k) { return k.toUpperCase(); }
+
+    function renderAttacks() {
+        const list = document.getElementById('s5-attacks');
+        list.innerHTML = '';
+        draft.attacks.forEach((at, i) => {
+            const row = document.createElement('div');
+            row.className = 'cc-row';
+            const bonus = draft.profBonus + abilityMod(draft.abilities[at.ability || 'str']) + (Number(at.extra) || 0);
+            row.innerHTML = `
+                <input value="${escAttr(at.name)}" placeholder="Attack" data-ai="${i}" data-k="name" style="flex:1.4;">
+                <select data-ai="${i}" data-k="ability" title="Ability used">
+                    ${ABILITY_KEYS.map(k => `<option value="${k}" ${at.ability === k ? 'selected' : ''}>${k.toUpperCase()}</option>`).join('')}
+                </select>
+                <input class="cc-sm" value="${escAttr(at.damage)}" placeholder="Damage" data-ai="${i}" data-k="damage" title="Damage dice e.g. 1d8+3">
+                <input class="cc-sm" value="${escAttr(at.range)}" placeholder="Range" data-ai="${i}" data-k="range" title="Range">
+                <span class="cc-hint" style="min-width:64px; text-align:center;">hit <b style="color:var(--secondary);">${formatMod(bonus)}</b></span>
+                <button class="btn btn-delete" type="button" style="flex:0; padding:4px 10px;" onclick="${'removeRow(\'s5-attacks\', ' + i + ', \'attack\')'}">✕</button>`;
+            list.appendChild(row);
+        });
+        list.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('input', e => {
+                const i = Number(el.dataset.ai);
+                const k = el.dataset.k;
+                if (!draft.attacks[i]) return;
+                draft.attacks[i][k] = el.value;
+                if (k === 'ability') { el.parentElement.querySelector('.cc-hint b').textContent = formatMod(draft.profBonus + abilityMod(draft.abilities[el.value]) + (Number(draft.attacks[i].extra) || 0)); }
+            });
+        });
+        // re-render spell info
+        if (draft.spellcaster) {
+            document.getElementById('s5-spell-dc').value = DC_BASE + draft.profBonus + spellMod();
+            document.getElementById('s5-spell-atk').value = formatMod(draft.profBonus + spellMod());
+        }
+    }
+
+    function weaponsToAttacks() {
+        draft.weapons.forEach(wid => {
+            const w = WEAPONS.find(x => x.id === wid);
+            if (!w) return;
+            if (!draft.attacks.some(a => a.name.toLowerCase().includes(w.id.replace(/-/g, ' ').toLowerCase()))) {
+                draft.attacks.push({
+                    name: w.name.split(' (')[0],
+                    ability: w.finesse || w.ranged ? 'dex' : 'str',
+                    damage: w.die,
+                    range: w.ranged ? 'Ranged' : 'Melee'
+                });
+            }
+        });
+    }
+
+    function addAttackRow() { draft.attacks.push({ name: '', ability: 'str', damage: '', range: '', extra: 0 }); renderAttacks(); }
+
+    function spellcasterChanged() {
+        const box = document.getElementById('s5-spellcaster');
+        draft.spellcaster = box.checked;
+        document.getElementById('s5-spell-box').style.display = box.checked ? 'grid' : 'none';
+        if (box.checked) { renderSpellList(); autoSpellSlots(); }
+        refreshStep5();
+    }
+
+    function spellOptionsForLevel(level) {
+        const sb = window.SPELLBOOK && SPELLBOOK.classes && SPELLBOOK.classes[draft.class];
+        if (!sb || !sb.spells) return [];
+        return sb.spells[String(level)] || [];
+    }
+
+    function maxSpellLevelForChar(lvl) {
+        const sb = window.SPELLBOOK && SPELLBOOK.classes && SPELLBOOK.classes[draft.class];
+        if (sb) {
+            lvl = Math.max(1, Math.min(20, Number(lvl) || 1));
+            if (sb.prog === 'pact' && sb.pact && sb.pact[lvl - 1]) {
+                return Math.min(9, Number(sb.pact[lvl - 1][3]) || 0);
+            }
+            if (sb.slots && sb.slots[lvl - 1]) {
+                const row = sb.slots[lvl - 1];
+                let hi = 0;
+                for (let i = 0; i < row.length; i++) if (row[i] > 0) hi = i + 1;
+                return Math.min(9, hi);
+            }
+        }
+        return Math.max(0, Math.min(9, Math.ceil((Number(lvl) || 1) / 2)));
+    }
+
+    function spellLevelLabel(l) {
+        if (l === 0) return 'Cantrip';
+        const n = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'][l - 1];
+        return n + ' Level';
+    }
+
+    function autoSpellSlots() {
+        const el = document.getElementById('s5-spell-slots');
+        if (!el) return;
+        if (draft._slotsTouched) return;
+        const sb = window.SPELLBOOK && SPELLBOOK.classes && SPELLBOOK.classes[draft.class];
+        if (!sb) return;
+        const lvl = Math.max(1, Math.min(20, Number(draft.level) || 1));
+        let text = '';
+        if (sb.prog === 'pact' && sb.pact && sb.pact[lvl - 1]) {
+            const p = sb.pact[lvl - 1];
+            text = p[2] + ' (pact ' + spellLevelLabel(Number(p[3]) || 1) + ')';
+        } else if (sb.slots && sb.slots[lvl - 1]) {
+            const row = sb.slots[lvl - 1];
+            const parts = [];
+            for (let i = 0; i < 9; i++) if (row[i] > 0) parts.push(row[i]);
+            text = parts.join(',');
+        }
+        el.value = text;
+        draft.spellSlots = text;
+    }
+
+    function renderSpellList() {
+        const list = document.getElementById('s5-spell-list');
+        list.innerHTML = '';
+        const max = maxSpellLevelForChar(draft.level);
+        document.getElementById('s5-max-level').textContent = spellLevelLabel(max);
+        draft.spells.forEach((sp, i) => {
+            const opts = spellOptionsForLevel(Number(sp.level) || 0);
+            const row = document.createElement('div');
+            row.className = 'cc-row';
+            row.innerHTML = `
+                <select data-si="${i}" data-k="level" title="Spell level">
+                    ${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(l =>
+                        `<option value="${l}" ${(Number(sp.level) || 0) === l ? 'selected' : ''} ${l > max ? 'disabled' : ''}>${spellLevelLabel(l)}</option>`
+                    ).join('')}
+                </select>
+                <input value="${escAttr(sp.name)}" placeholder="Spell name" list="s5-spell-opt-${i}" data-si="${i}" data-k="name" style="flex:1.6;">
+                <datalist id="s5-spell-opt-${i}">
+                    ${opts.map(n => `<option value="${escAttr(n)}">`).join('')}
+                </datalist>
+                ${opts.length ? `<span class="cc-hint" style="font-size:0.72rem;">${opts.length} spells</span>` : ''}
+                <button class="btn btn-delete" type="button" style="flex:0; padding:4px 10px;" onclick="${'removeRow(\'s5-spell-list\', ' + i + ', \'spell\')'}">✕</button>`;
+            list.appendChild(row);
+        });
+        list.querySelectorAll('select').forEach(el => {
+            el.addEventListener('change', e => {
+                const i = Number(el.dataset.si);
+                if (!draft.spells[i]) return;
+                draft.spells[i].level = Number(el.value);
+                const dl = document.getElementById('s5-spell-opt-' + i);
+                if (dl) {
+                    const opts = spellOptionsForLevel(draft.spells[i].level);
+                    dl.innerHTML = opts.map(n => `<option value="${escAttr(n)}">`).join('');
+                    const hint = el.parentElement.querySelector('.cc-hint');
+                    if (hint) hint.textContent = opts.length ? opts.length + ' spells' : '';
+                }
+            });
+        });
+        list.querySelectorAll('input').forEach(el => {
+            el.addEventListener('input', e => {
+                const i = Number(el.dataset.si);
+                if (!draft.spells[i]) return;
+                draft.spells[i].name = el.value;
+                showSpellInfo(i);
+            });
+            el.addEventListener('focus', () => showSpellInfo(Number(el.dataset.si)));
+        });
+        autoSpellSlots();
+    }
+
+    function spellLookup(q) {
+        if (!q) return null;
+        const d = window.SPELLBOOK && SPELLBOOK.details;
+        if (!d) return null;
+        const ql = q.trim().toLowerCase();
+        return d[ql] || null;
+    }
+
+    const SCHOOL_COLORS = {
+        Evocation: '#f87171', Conjuration: '#2dd4bf', Transmutation: '#fb923c',
+        Necromancy: '#a78bfa', Abjuration: '#60a5fa', Divination: '#cbd5e1',
+        Enchantment: '#f472b6', Illusion: '#818cf8'
+    };
+
+    function spellProseHTML(text) {
+        const raw = (text || '').replace(/\s+/g, ' ').trim();
+        if (!raw) return '';
+        const sentenceRe = /[^.!?]+[.!?]+(?:\s+)|[^.!?]+$/g;
+        const sentences = (raw.match(sentenceRe) || [raw]).map(s => s.trim()).filter(Boolean);
+        const chunks = [];
+        let cur = [], curLen = 0;
+        sentences.forEach(s => {
+            if (curLen && (cur.length >= 3 || curLen + s.length > 260)) {
+                chunks.push(cur.join(' '));
+                cur = []; curLen = 0;
+            }
+            cur.push(s); curLen += s.length + 1;
+        });
+        if (cur.length) chunks.push(cur.join(' '));
+        return '<div class="cc-stext">' + chunks.map(c => '<p>' + escHtml(c) + '</p>').join('') + '</div>';
+    }
+
+    function spellInfoHTML(q) {
+        q = (q || '').trim();
+        const d = spellLookup(q);
+        const box = document.getElementById('s5-spell-info');
+        if (!d) {
+            box.hidden = false;
+            box.innerHTML = '<div class="cc-empty">' + (q
+                ? 'No PHB spell found for “' + escHtml(q) + '”.'
+                : 'Type a spell name to see its effect, damage dice and area on the grid.') + '</div>';
+            return;
+        }
+        const levelName = d.level === 0 ? 'Cantrip' : spellLevelLabel(d.level);
+        const rangeLabel = d.range ? d.range.label : '?';
+        const schoolColor = SCHOOL_COLORS[d.school] || '#94a3b8';
+
+        const dmgParts = (d.dmg || []).slice();
+        let dmgMain = '';
+        if (dmgParts.length && d.dmgTypes && d.dmgTypes.length) {
+            dmgMain = dmgParts[0] + ' ' + d.dmgTypes.join('/') + ' damage';
+        } else if (dmgParts.length) {
+            dmgMain = dmgParts[0] + ' damage';
+        }
+        const dmgBits = [];
+        if (d.scaled) dmgBits.push('scales: ' + d.scaled.base + ' at slot ' + d.scaled.from + ', +' + d.scaled.per + '/slot');
+
+        const stats = [];
+        if (d.time) stats.push(['Casting', d.time]);
+        stats.push(['Range', rangeLabel]);
+        if (d.dur) stats.push(['Duration', d.dur]);
+        if (d.comps) stats.push(['Components', d.comps]);
+        if (d.save) stats.push(['Save', d.save]);
+        if (d.atk) stats.push(['Attack', d.atk]);
+
+        const hiBody = (d.higher || '').replace(/^\s*(at higher levels[.:]?\s*)/i, '');
+
+        let gridSvg = '';
+        try { gridSvg = spellGridSVG(d); } catch (err) { gridSvg = ''; }
+
+        const textBlock =
+            spellProseHTML(d.text) +
+            (hiBody ? '<div class="cc-shigher"><b>At Higher Levels</b>' + escHtml(hiBody) + '</div>' : '');
+
+        const buffs = d.buffs || [], debuffs = d.debuffs || [];
+        const statusCorner = (buffs.length || debuffs.length)
+            ? '<div class="cc-status">' +
+              (buffs.length
+                ? '<div class="cc-status-row cc-status-buff"><i>+</i>' + buffs.map(x => '<span>' + escHtml(x) + '</span>').join('') + '</div>'
+                : '') +
+              (debuffs.length
+                ? '<div class="cc-status-row cc-status-debuff"><i>&minus;</i>' + debuffs.map(x => '<span>' + escHtml(x) + '</span>').join('') + '</div>'
+                : '') +
+              '</div>'
+            : '';
+
+        let html =
+            '<div class="cc-shead">' +
+                '<div class="cc-stitle">' +
+                    '<h5>' + escHtml(d.name) + '</h5>' +
+                    '<div class="cc-schips">' +
+                        '<span class="cc-chip cc-chip-lv">' + escHtml(levelName) + '</span>' +
+                        (d.conc ? '<span class="cc-chip cc-chip-conc">◎ Concentration</span>' : '') +
+                        '<span class="cc-chip cc-chip-school" style="--sch:' + schoolColor + '">' + escHtml(d.school) + '</span>' +
+                    '</div>' +
+                '</div>' +
+                statusCorner +
+            '</div>' +
+            (stats.length ? '<div class="cc-sstats">' + stats.map(s => '<span class="cc-stat"><i>' + escHtml(s[0]) + '</i><b>' + escHtml(s[1]) + '</b></span>').join('') + '</div>' : '') +
+            (dmgMain ? '<div class="cc-sdmg"><span class="cc-dmgicon">⚡</span><div><b>' + escHtml(dmgMain) + '</b>' + (dmgBits.length ? '<small>' + escHtml(dmgBits.join(' · ')) + '</small>' : '') + '</div></div>' : '') +
+            (gridSvg
+                ? '<div class="cc-smain"><div>' + textBlock + '</div><div class="cc-sgrid">' + gridSvg + '</div></div>'
+                : textBlock);
+        box.hidden = false;
+        box.innerHTML = html;
+        if (gridSvg) {
+            const svg = box.querySelector('.cc-sgrid svg');
+            if (svg) { try { bindSpellGrid(svg, d); } catch (err) { /* keep static svg */ } }
+        }
+    }
+
+    function escHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function showSpellInfo(i) {
+        const sp = draft.spells[i];
+        if (!sp) return;
+        spellInfoHTML(sp.name);
+    }
+
+    let _gridSnap = false;
+
+    function spellGridGeo(d) {
+        const range = d.range || { label: '', ft: 0, type: 'point' };
+        const area = d.area || null;
+        const rawShape = (area ? area[0] : null) || (range.type !== 'point' ? range.type : null) || range.shape || null;
+        const shape = rawShape === 'radius' ? 'sphere' : rawShape;
+        const areaFt = (area ? area[1] : 0) || range.areaFt || range.ft || 0;
+        const rft = range.ft || 0;
+        let mode = 'none', maxCells = 0;
+        if (rft && range.type === 'point') { mode = 'point'; maxCells = rft / 5; }
+        else if (rft && (range.type === 'cube' || range.type === 'cone' || range.type === 'line')) { mode = 'directed'; maxCells = rft / 5; }
+        else if (rft && range.type === 'touch') { mode = 'touch'; maxCells = 1; }
+        else if (range.type === 'radius' && rft) { mode = 'none'; maxCells = rft / 5; }
+        else if (range.type === 'point' && (range.label === 'Touch' || range.label === 'Self' || range.label === 'Sight')) {
+            mode = range.label === 'Touch' ? 'touch' : 'none';
+            maxCells = range.label === 'Touch' ? 1 : 0;
+        }
+        const cols = 19, rows = 11, W = cols * 22, H = rows * 22;
+        const maxFeet = Math.max(maxCells * 5, 5);
+        const cell = Math.min(22, Math.max(9, (W - 2 * 30) / Math.max(maxFeet / 5, 4)));
+        const caster = { x: Math.max(22, Math.min(3 * cell, W * 0.16)), y: H * 0.5 };
+        return { range, area, shape, areaFt, mode, maxCells, cell, W, H, cols, rows, caster };
+    }
+
+    function _shapeCenter(geo, t) {
+        const { shape, cell, caster, mode } = geo;
+        if (shape === 'cube' || shape === 'square') {
+            if (mode === 'directed') {
+                const L = Math.max(0.75, (geo.areaFt / 5) * cell);
+                const dx = t.x - caster.x, dy = t.y - caster.y;
+                const Ln = Math.sqrt(dx * dx + dy * dy) || 1;
+                return { x: caster.x + (dx / Ln) * (L * 0.5), y: caster.y + (dy / Ln) * (L * 0.5) };
+            }
+            return t;
+        }
+        return t;
+    }
+
+    function _shapePoints(geo, t) {
+        const { shape, areaFt, cell, caster } = geo;
+        const L = Math.max(0.75, (areaFt / 5) * cell);
+        const C = _shapeCenter(geo, t);
+        if (shape === 'sphere' || shape === 'hemisphere' || shape === 'cylinder') {
+            return { el: 'circle', cx: C.x, cy: C.y, r: L, fill: 'rgba(96,165,250,0.22)', stroke: 'rgba(147,197,253,0.9)' };
+        }
+        if (shape === 'cube' || shape === 'square') {
+            return { el: 'rect', x: C.x - L * 0.5, y: C.y - L * 0.5, w: L, h: L, fill: 'rgba(250,204,21,0.22)', stroke: 'rgba(253,224,71,0.95)' };
+        }
+        if (shape === 'cone') {
+            const dx = t.x - caster.x, dy = t.y - caster.y;
+            const Ln = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ux = dx / Ln, uy = dy / Ln;
+            if (Ln < cell * 0.5) Ln = cell * 0.5;
+            const far = { x: caster.x + ux * L, y: caster.y + uy * L };
+            const halfW = L * 0.5;
+            const px = -uy, py = ux;
+            return { el: 'polygon', pts: `${caster.x},${caster.y} ${(far.x + px * halfW).toFixed(1)},${(far.y + py * halfW).toFixed(1)} ${(far.x - px * halfW).toFixed(1)},${(far.y - py * halfW).toFixed(1)}`, fill: 'rgba(52,211,153,0.2)', stroke: 'rgba(110,231,183,0.95)' };
+        }
+        if (shape === 'line') {
+            const dx = t.x - caster.x, dy = t.y - caster.y;
+            const Ln = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ux = dx / Ln, uy = dy / Ln;
+            const ex = caster.x + ux * L, ey = caster.y + uy * L;
+            const px = -uy * cell * 0.5, py = ux * cell * 0.5;
+            return { el: 'polygon', pts: `${caster.x + px},${caster.y + py} ${ex + px},${ey + py} ${ex - px},${ey - py} ${caster.x - px},${caster.y - py}`, fill: 'rgba(251,191,36,0.2)', stroke: 'rgba(252,211,77,0.95)' };
+        }
+        return null;
+    }
+
+    function _affectedCells(geo, t) {
+        const { shape, areaFt, cell, caster, W, H } = geo;
+        if (!shape || !areaFt) return [];
+        const C = _shapeCenter(geo, t);
+        const nx = Math.ceil(W / cell), ny = Math.ceil(H / cell);
+        const cells = [];
+        const L = Math.max(0.75, (areaFt / 5) * cell);
+        if (shape === 'sphere' || shape === 'hemisphere' || shape === 'cylinder') {
+            const r = areaFt * (cell / 5);
+            const r2 = r * r;
+            const c0 = Math.max(0, Math.floor((C.x - r) / cell));
+            const c1 = Math.min(nx, Math.ceil((C.x + r) / cell));
+            const r0 = Math.max(0, Math.floor((C.y - r) / cell));
+            const r1 = Math.min(ny, Math.ceil((C.y + r) / cell));
+            for (let c = c0; c <= c1; c++) for (let rr = r0; rr <= r1; rr++) {
+                const cx = (c + 0.5) * cell - C.x, cy = (rr + 0.5) * cell - C.y;
+                if (cx * cx + cy * cy <= r2) cells.push([c, rr]);
+            }
+        } else if (shape === 'cube' || shape === 'square') {
+            const h = L * 0.5;
+            const c0 = Math.max(0, Math.floor((C.x - h) / cell));
+            const c1 = Math.min(nx, Math.ceil((C.x + h) / cell));
+            const r0 = Math.max(0, Math.floor((C.y - h) / cell));
+            const r1 = Math.min(ny, Math.ceil((C.y + h) / cell));
+            for (let c = c0; c <= c1; c++) for (let rr = r0; rr <= r1; rr++) cells.push([c, rr]);
+        } else if (shape === 'cone' || shape === 'line') {
+            let dx = t.x - caster.x, dy = t.y - caster.y;
+            const Ln = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ux = dx / Ln, uy = dy / Ln;
+            for (let c = 0; c <= nx; c++) for (let rr = 0; rr <= ny; rr++) {
+                const cx = (c + 0.5) * cell - caster.x, cy = (rr + 0.5) * cell - caster.y;
+                const dot = cx * ux + cy * uy;
+                const cross = cx * (-uy) + cy * ux;
+                const pd = Math.abs(cross);
+                if (shape === 'cone') {
+                    if (dot >= 0 && dot <= L && pd <= dot * 0.5) cells.push([c, rr]);
+                } else {
+                    if (dot >= 0 && dot <= L && pd <= cell * 0.5) cells.push([c, rr]);
+                }
+            }
+        }
+        return cells;
+    }
+
+    function _cellsMarkup(geo, t) {
+        const cells = _affectedCells(geo, t);
+        if (!cells.length) return '';
+        const { cell, shape } = geo;
+        const col = shape === 'sphere' || shape === 'hemisphere' || shape === 'cylinder' ? 'rgba(96,165,250,0.34)'
+            : shape === 'cone' ? 'rgba(52,211,153,0.32)'
+            : 'rgba(250,204,21,0.34)';
+        const ins = 0.6;
+        return cells.map(([c, rr]) => `<rect x="${(c * cell + ins).toFixed(1)}" y="${(rr * cell + ins).toFixed(1)}" width="${(cell - ins).toFixed(1)}" height="${(cell - ins).toFixed(1)}" fill="${col}" stroke="rgba(255,255,255,0.28)" stroke-width="0.7"/>`).join('');
+    }
+
+    function _shapeMarkup(geo, t) {
+        const p = _shapePoints(geo, t);
+        if (!p) return '';
+        const g = ` fill="${p.fill}" stroke="${p.stroke}" stroke-width="1.4"`;
+        if (p.el === 'circle') return `<circle cx="${p.cx}" cy="${p.cy}" r="${p.r.toFixed(1)}"${g}/>`;
+        if (p.el === 'rect') return `<rect x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" width="${p.w.toFixed(1)}" height="${p.h.toFixed(1)}"${g}/>`;
+        if (p.el === 'polygon') return `<polygon points="${p.pts}"${g}/>`;
+        return '';
+    }
+
+    function _defaultTarget(geo) {
+        const { caster, cell, maxCells, mode, W, H } = geo;
+        if (mode === 'directed') {
+            return { x: caster.x + maxCells * cell * 0.92, y: caster.y };
+        }
+        if (mode === 'point' || mode === 'touch') {
+            const cells = Math.min(maxCells, (W - caster.x) / cell * 0.5);
+            return { x: caster.x + cells * cell, y: H * 0.5 };
+        }
+        return { x: caster.x, y: caster.y };
+    }
+
+    function _clampTarget(geo, pt, snap) {
+        const { caster, cell, maxCells, mode, W, H } = geo;
+        let dx = pt.x - caster.x, dy = pt.y - caster.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const maxPx = maxCells * cell;
+        if (mode === 'point' || mode === 'touch') {
+            if (dist > maxPx) { dx = dx / dist * maxPx; dy = dy / dist * maxPx; }
+            let x = Math.max(0, Math.min(W, caster.x + dx));
+            let y = Math.max(0, Math.min(H, caster.y + dy));
+            if (snap) { x = Math.round(x / cell) * cell; y = Math.round(y / cell) * cell; }
+            return { x: x, y: y };
+        }
+        if (mode === 'directed') {
+            if (dist < 1) return caster;
+            let a = Math.atan2(dy, dx);
+            if (snap) a = Math.round(a / (Math.PI / 4)) * (Math.PI / 4);
+            const cos = Math.cos(a), sin = Math.sin(a);
+            let r = maxPx;
+            if (cos > 0) r = Math.min(r, (W - caster.x) / cos);
+            else if (cos < 0) r = Math.min(r, -caster.x / cos);
+            if (sin > 0) r = Math.min(r, (H - caster.y) / sin);
+            else if (sin < 0) r = Math.min(r, -caster.y / sin);
+            return { x: caster.x + cos * r, y: caster.y + sin * r };
+        }
+        return pt;
+    }
+
+    function spellGridSVG(d) {
+        const geo = spellGridGeo(d);
+        const { W, H, caster, cell, shape, areaFt, mode } = geo;
+        const g = (fill, stroke, sw) => ` fill="${fill}" stroke="${stroke}" stroke-width="${sw || 1}"`;
+
+        let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive spell range grid">`;
+        const nx = Math.ceil(W / cell), ny = Math.ceil(H / cell);
+        for (let c = 0; c <= nx; c++) s += `<line x1="${(c * cell).toFixed(1)}" y1="0" x2="${(c * cell).toFixed(1)}" y2="${H}" stroke="#ffffff14" stroke-width="1"/>`;
+        for (let r = 0; r <= ny; r++) s += `<line x1="0" y1="${(r * cell).toFixed(1)}" x2="${W}" y2="${(r * cell).toFixed(1)}" stroke="#ffffff14" stroke-width="1"/>`;
+        // affected grid cells (populated on drag)
+        s += `<g data-sg="cells"></g>`;
+
+        // range ring
+        if (mode !== 'none') {
+            const R = geo.maxCells * cell;
+            s += `<circle cx="${caster.x}" cy="${caster.y}" r="${R.toFixed(1)}" fill="rgba(255,255,255,0.03)" stroke="rgba(148,163,184,0.4)" stroke-width="1.2" stroke-dasharray="6 5"/>`;
+        }
+        // area shape (init at default target)
+        const t0 = _defaultTarget(geo);
+        s += `<g data-sg="shape">${_shapeMarkup(geo, t0)}</g>`;
+        // dashed aim line
+        s += `<line data-sg="line" x1="${caster.x}" y1="${caster.y}" x2="${t0.x}" y2="${t0.y}" stroke="rgba(255,255,255,0.45)" stroke-width="1.2" stroke-dasharray="5 4"/>`;
+        // target marker
+        s += `<circle data-sg="target" cx="${t0.x}" cy="${t0.y}" r="6" fill="#fbbf24" stroke="#fff" stroke-width="1.4"/>`;
+        // caster
+        s += `<circle data-sg="caster" cx="${caster.x}" cy="${caster.y}" r="${cell * 0.42}" fill="rgba(99,102,241,0.85)" stroke="#e0e7ff" stroke-width="1.5"/>`;
+        s += `<text x="${caster.x}" y="${caster.y + 4}" font-size="11" text-anchor="middle" fill="#fff" font-weight="bold">C</text>`;
+        // legend
+        const rangeFt = geo.range.ft ? `Range ${geo.range.ft} ft` : (geo.range.label || '');
+        const areaTxt = shape ? ` · ${areaFt} ft ${shape}` : '';
+        const cap = String((rangeFt + areaTxt).replace(/[<>]/g, ch => ch === '<' ? '&lt;' : '&gt;'));
+        s += `<text x="8" y="16" font-size="12" fill="#cbd5e1" font-family="sans-serif">${cap}</text>`;
+        // snap toggle (top-right)
+        const bx = W - 48, by = 6, bw = 28, bh = 20;
+        const maskId = 'magmask' + Math.random().toString(36).slice(2);
+        const snapFill = _gridSnap ? '#bfdbfe' : '#94a3b8';
+        s += `<g data-sg="snapbtn" role="button" aria-pressed="${_gridSnap}" tabindex="0" title="Snap to grid (click to toggle)" style="cursor:pointer;">
+            <rect data-sg="snapbg" x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="5" fill="${_gridSnap ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.06)'}" stroke="${_gridSnap ? 'rgba(147,197,253,0.95)' : 'rgba(148,163,184,0.45)'}" stroke-width="1"/>
+            <svg x="${bx + 2}" y="${by + 2}" width="${bw - 4}" height="${bh - 4}" viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <mask id="${maskId}">
+                        <rect width="512" height="512" fill="white"/>
+                        <path d="M 196 360 A 130 130 0 0 1 456 360 L 456 495 L 196 495 Z" fill="black"/>
+                    </mask>
+                </defs>
+                <g data-sg="snapgrid" mask="url(#${maskId})" fill="${snapFill}" opacity="${_gridSnap ? 1 : 0.55}">
+                    <rect x="94" y="40" width="32" height="432" rx="16"/>
+                    <rect x="224" y="40" width="32" height="432" rx="16"/>
+                    <rect x="354" y="40" width="32" height="432" rx="16"/>
+                    <rect x="40" y="94" width="432" height="32" rx="16"/>
+                    <rect x="40" y="224" width="432" height="32" rx="16"/>
+                    <rect x="40" y="354" width="432" height="32" rx="16"/>
+                    <path d="M 216 370 A 110 110 0 0 1 436 370 L 436 430 L 376 430 L 376 390 A 50 50 0 0 0 276 390 L 276 430 L 216 430 Z"/>
+                    <rect x="216" y="445" width="60" height="35"/>
+                    <rect x="376" y="445" width="60" height="35"/>
+                </g>
+            </svg>
+        </g>`;
+        s += `<text x="8" y="${H - 24}" font-size="10" fill="#94a3b8" font-family="sans-serif" data-sg="legend">drag target · squares = 5 ft · snap ${_gridSnap ? 'on' : 'off'}</text>`;
+        s += `<text data-sg="dist" x="8" y="${H - 8}" font-size="10" fill="#cbd5e1" font-family="sans-serif"></text>`;
+        s += '</svg>';
+        return s;
+    }
+
+    function _svgPoint(svg, evt) {
+        try {
+            const pt = svg.createSVGPoint();
+            pt.x = evt.clientX; pt.y = evt.clientY;
+            const ctm = svg.getScreenCTM();
+            if (ctm) return pt.matrixTransform(ctm.inverse());
+        } catch (err) { /* fall through */ }
+        if (evt.offsetX != null && evt.offsetY != null) {
+            const svgW = svg.viewBox.baseVal.width, svgH = svg.viewBox.baseVal.height;
+            const cssW = svg.clientWidth || svgW, cssH = svg.clientHeight || svgH;
+            return { x: evt.offsetX * (svgW / cssW), y: evt.offsetY * (svgH / cssH) };
+        }
+        return null;
+    }
+
+    function bindSpellGrid(svg, d) {
+        const geo = spellGridGeo(d);
+        let dragging = false;
+        let t = _defaultTarget(geo);
+        const shapeG = svg.querySelector('[data-sg="shape"]');
+        const lineEl = svg.querySelector('[data-sg="line"]');
+        const tgt = svg.querySelector('[data-sg="target"]');
+        const dist = svg.querySelector('[data-sg="dist"]');
+        const cellsG = svg.querySelector('[data-sg="cells"]');
+        const btn = svg.querySelector('[data-sg="snapbtn"]');
+        const bgEl = svg.querySelector('[data-sg="snapbg"]');
+        const gridEl = svg.querySelector('[data-sg="snapgrid"]');
+        const legend = svg.querySelector('[data-sg="legend"]');
+
+        function redraw(nt) {
+            t = nt;
+            if (shapeG) shapeG.innerHTML = _shapeMarkup(geo, t);
+            if (cellsG) cellsG.innerHTML = _cellsMarkup(geo, t);
+            if (lineEl) { lineEl.setAttribute('x2', t.x); lineEl.setAttribute('y2', t.y); }
+            if (tgt) { tgt.setAttribute('cx', t.x); tgt.setAttribute('cy', t.y); }
+            if (dist) {
+                const dft = Math.round(Math.sqrt((t.x - geo.caster.x) ** 2 + (t.y - geo.caster.y) ** 2) / geo.cell * 5);
+                const limit = geo.range.ft || (geo.mode === 'touch' ? 5 : '—');
+                dist.setAttribute('fill', dft > limit ? '#f87171' : '#cbd5e1');
+                dist.textContent = `target ≈ ${dft} ft (max ${limit} ft)`;
+            }
+        }
+        redraw(t);
+
+        const move = e => {
+            if (!dragging) return;
+            e.preventDefault();
+            const p = _svgPoint(svg, e);
+            if (!p) return;
+            const c = _clampTarget(geo, p, _gridSnap);
+            redraw(c);
+            svg.classList.add('dragging');
+        };
+        const snapBtnRender = snap => {
+            if (btn) btn.setAttribute('aria-pressed', String(snap));
+            if (bgEl) {
+                bgEl.setAttribute('fill', snap ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.06)');
+                bgEl.setAttribute('stroke', snap ? 'rgba(147,197,253,0.95)' : 'rgba(148,163,184,0.45)');
+            }
+            if (gridEl) {
+                gridEl.setAttribute('fill', snap ? '#bfdbfe' : '#94a3b8');
+                gridEl.setAttribute('opacity', snap ? '1' : '0.55');
+            }
+            if (legend) legend.textContent = 'drag target · squares = 5 ft · snap ' + (snap ? 'on' : 'off');
+        };
+        if (btn) {
+            btn.addEventListener('pointerdown', e => e.stopPropagation());
+            const toggle = () => {
+                _gridSnap = !_gridSnap;
+                redraw(_clampTarget(geo, t, _gridSnap));
+                snapBtnRender(_gridSnap);
+            };
+            btn.addEventListener('click', toggle);
+            btn.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); } });
+        }
+        svg.addEventListener('pointerdown', e => {
+            if (geo.mode === 'none') return;
+            dragging = true;
+            try { svg.setPointerCapture(e.pointerId); } catch (err) { }
+            move(e);
+        });
+        svg.addEventListener('pointermove', move);
+        const up = e => { dragging = false; svg.classList.remove('dragging'); };
+        svg.addEventListener('pointerup', up);
+        svg.addEventListener('pointercancel', up);
+    }
+
+    function addSpellRow() {
+        draft.spells.push({ level: 0, name: '' });
+        renderSpellList();
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // Step 6
+    // ───────────────────────────────────────────────────────────
+    function classHitDieValue() {
+        const cls = CLASSES[draft.class];
+        const dieStr = cls && cls.hitDie ? cls.hitDie : 'd10';
+        return Number(dieStr.replace('d', ''));
+    }
+
+    function refreshCombatSuggestions() {
+        const conMod = abilityMod(draft.abilities.con);
+        const die = classHitDieValue();
+        const dieAvg = Math.floor(die / 2) + 1;
+        draft.profBonus = PROF_BONUS(draft.level);
+        const lvl = draft.level;
+        document.getElementById('s6-hitdie').value = `d${die}`;
+        document.getElementById('s6-formula').textContent = `${die} + ${conMod} (CON) + ${Math.max(0, lvl - 1)} × (${dieAvg} + ${conMod}) = ${die + conMod + Math.max(0, lvl - 1) * (dieAvg + conMod)}`;
+
+        if (!draft._hpTouched) {
+            document.getElementById('s6-maxhp').value = die + conMod + Math.max(0, lvl - 1) * (dieAvg + conMod);
+            draft.maxHp = Number(document.getElementById('s6-maxhp').value);
+        }
+        if (!draft._curTouched) document.getElementById('s6-curhp').value = document.getElementById('s6-maxhp').value;
+        if (!draft._acTouched) {
+            const dexMod = abilityMod(draft.abilities.dex);
+            let ac = 10 + dexMod;
+            const armorKey = draft.armor;
+            const arm = ARMORS[armorKey];
+            if (draft.armor && arm && !arm.shield) {
+                ac = arm.ac + Math.min(dexMod, arm.dexCap !== null ? arm.dexCap : 99);
+            } else if (draft.armor && arm && arm.shield) {
+                ac += arm.ac;
+            } else {
+                if (draft.class === 'monk') ac = Math.max(ac, 10 + dexMod + abilityMod(draft.abilities.wis));
+                if (draft.class === 'barbarian') ac = Math.max(ac, 10 + dexMod + abilityMod(draft.abilities.con));
+                if (draft.race === 'tortle') ac = Math.max(ac, 17);
+            }
+            document.getElementById('s6-ac').value = ac;
+            draft.ac = ac;
+        }
+        document.getElementById('s6-init').value = formatMod(abilityMod(draft.abilities.dex));
+        updateHpHint();
+    }
+
+    function updateHpHint() {
+        document.getElementById('s6-hint').textContent = `Hit Die d${classHitDieValue()} from ${CLASSES[draft.class] ? CLASSES[draft.class].name : 'your class'} + ${abilityMod(draft.abilities.con)} CON.`;
+    }
+
+    function formatMod(v) { v = Number(v); return v >= 0 ? '+' + v : String(v); }
+
+    // ───────────────────────────────────────────────────────────
+    // Step 7 features
+    // ───────────────────────────────────────────────────────────
+    function renderFeatures() {
+        const list = document.getElementById('s7-features');
+        list.innerHTML = '';
+        draft.features.forEach((f, i) => {
+            const row = document.createElement('div');
+            row.className = 'cc-row';
+            row.innerHTML = `<input value="${escAttr(f.name)}" placeholder="Feature name" data-fi="${i}" data-k="name" style="flex:1.2;">
+                <input value="${escAttr(f.desc)}" placeholder="Description" data-fi="${i}" data-k="desc" style="flex:2;">
+                <button class="btn btn-delete" type="button" style="flex:0; padding:4px 10px;" onclick="removeRow('s7-features', ${i}, 'feature')">✕</button>`;
+            list.appendChild(row);
+        });
+        list.querySelectorAll('input').forEach(el => {
+            el.addEventListener('input', () => {
+                const i = Number(el.dataset.fi);
+                const k = el.dataset.k;
+                if (draft.features[i]) draft.features[i][k] = el.value;
+            });
+        });
+    }
+
+    function addFeatureRow() { draft.features.push({ name: '', desc: '' }); renderFeatures(); }
+
+    function suggestClassFeatures() {
+        const cls = draft.class;
+        const map = {
+            fighter: ['Fighting Style (choose one)', 'Second Wind (bonus action heal)', 'Action Surge (extra action)'],
+            barbarian: ['Rage (advantage STR & bonus damage)', 'Unarmored Defense (10 + DEX + CON)', 'Reckless Attack (advantage = attacks against you too)'],
+            rogue: ['Expertise (double proficiency in 2 skills)', 'Sneak Attack (extra damage once/turn)', 'Thieves’ Cant (secret language)'],
+            wizard: ['Spellcasting (INT)', 'Arcane Recovery (regain spell slots on short rest)', 'Ritual Casting'],
+            cleric: ['Spellcasting (WIS)', 'Divine Domain (domain spells & features)', 'Channel Divinity (once per short rest)'],
+            bard: ['Spellcasting (CHA)', 'Bardic Inspiration (d6 die to allies)', 'Jack of All Trades'],
+            druid: ['Spellcasting (WIS)', 'Druidic (secret language)', 'Wild Shape (transform into beasts)'],
+            monk: ['Martial Arts (unarmed strikes)', 'Unarmored Defense', 'Ki (flurry of blows etc.)'],
+            paladin: ['Divine Sense', 'Lay on Hands (healing pool)', 'Fighting Style'],
+            ranger: ['Favored Enemy / Favored Foe', 'Natural Explorer', 'Fighting Style'],
+            sorcerer: ['Spellcasting (CHA)', 'Sorcerous Origin', 'Font of Magic (sorcery points)'],
+            warlock: ['Otherworldly Patron', 'Pact Magic (short-rest slots)', 'Eldritch Invocations']
+        };
+        const chosen = map[draft.class] || [];
+        chosen.forEach(n => {
+            if (!draft.features.some(f => f.name === n)) draft.features.push({ name: n, desc: '' });
+        });
+    }
+
+    function suggestRaceFeatures() {
+        const map = {
+            dwarf: ['Darkvision (60 ft)', 'Dwarven Resilience (advantage on poison saves)'],
+            elf: ['Darkvision (60 ft)', 'Fey Ancestry (advantage vs charm)', 'Trance (4 hr rest)'],
+            halfling: ['Lucky (reroll 1s)', 'Brave (advantage vs frightened)'],
+            'half-elf': ['Darkvision (60 ft)', 'Fey Ancestry (advantage vs charm)', 'Skill Versatility (+2 skills)'],
+            'half-orc': ['Darkvision (60 ft)', 'Relentless Endurance (drop to 1 HP instead of 0)', 'Savage Attacks (extra crit die)'],
+            tiefling: ['Darkvision (60 ft)', 'Hellish Resistance (fire resistance)', 'Infernal Legacy (thaumaturgy)'],
+            dragonborn: ['Draconic Ancestry (breath weapon)', 'Damage Resistance (your draconic type)'],
+            gnome: ['Darkvision (60 ft)', 'Gnome Cunning (advantage INT/WIS/CHA magic saves)'],
+            goliath: ['Powerful Build', 'Stone’s Endurance (reduce damage 1/turn)'],
+            aasimar: ['Darkvision (60 ft)', 'Celestial Resistance (radiant & necrotic)', 'Healing Hands'],
+            firbolg: ['Firbolg Magic (detect magic, disguise self)', 'Hidden Step (turn invisible)'],
+            kenku: ['Expert Forgery', 'Mimicry (copy sounds)'],
+            tabaxi: ['Darkvision (60 ft)', 'Feline Agility (double speed free)', 'Cat’s Claws'],
+            tortle: ['Natural Armor (AC 17)', 'Shell Defense', 'Hold Breath (1 hr)'],
+            bugbear: ['Darkvision (60 ft)', 'Long-Limbed (extra reach)', 'Sneaky'],
+            goblin: ['Darkvision (60 ft)', 'Fury of the Small', 'Nimble Escape'],
+            hobgoblin: ['Darkvision (60 ft)', 'Saving Face', 'Martial Training'],
+            kobold: ['Darkvision (60 ft)', 'Pack Tactics (advantage when ally nearby)', 'Sunlight Sensitivity'],
+            orc: ['Darkvision (60 ft)', 'Aggressive (bonus action move)', 'Menacing'],
+            'yuan-ti': ['Darkvision (60 ft)', 'Magic Resistance (advantage vs spells)', 'Poison Immunity'],
+            human: ['Versatility (see stat bonuses)']
+        };
+        (map[draft.race] || []).forEach(n => {
+            if (!draft.features.some(f => f.name === n)) draft.features.push({ name: n, desc: '' });
+        });
+    }
+
+    function suggestBackgroundFeatures() {
+        const bg = draft.background || '';
+        if (bg) {
+            const label = BACKGROUNDS[bg].notes;
+            const name = 'Feature: ' + (BACKGROUNDS[bg].name || '');
+            if (!draft.features.some(f => f.name === name)) draft.features.push({ name: name, desc: label });
+        }
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // Step 8 sync (reads from DOM on save)
+    // ───────────────────────────────────────────────────────────
+
+    // ───────────────────────────────────────────────────────────
+    // Navigation
+    // ───────────────────────────────────────────────────────────
+    function goStep(target) {
+        target = Math.max(0, Math.min(CONSTANTS.totalSteps - 1, target));
+        if (target > currentStep) {
+            const ok = validateStep(currentStep);
+            if (!ok) return;
+        }
+        if (target === 2) syncAbilitiesFromInputs();
+        if (target === 4) { renderItems(); renderGearList(); fillWeaponsChips(); }
+        if (target === 5) { refreshStep5(); if (draft.spellcaster) renderSpellList(); }
+        if (target === 7) renderFeatures();
+        if (target === 10) { suggestClassFeatures(); suggestRaceFeatures(); suggestBackgroundFeatures(); renderCard(); }
+        // persist DOM-to-draft for later steps
+        document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('step-' + target).classList.add('active');
+        currentStep = target;
+        updateProgress();
+        document.getElementById('cc-back').style.visibility = currentStep === 0 ? 'hidden' : 'visible';
+        const nextBtn = document.getElementById('cc-next');
+        if (currentStep === CONSTANTS.totalSteps - 1) {
+            nextBtn.textContent = 'Finish ✓';
+        } else {
+            nextBtn.textContent = 'Next →';
+        }
+    }
+
+    function syncAbilitiesFromInputs() {
+        ABILITY_KEYS.forEach(k => {
+            const v = Number(document.getElementById('a-' + k).value) || 10;
+            draft.abilities[k] = Math.max(1, Math.min(30, v));
+        });
+    }
+
+    function validateStep(step) {
+        if (step === 0) {
+            if (!SYSTEM) { alert('Please choose a game system first.'); return false; }
+        }
+        if (step === 1) {
+            if (!document.getElementById('s1-race').value || !document.getElementById('s1-class').value) {
+                alert('Please choose at least a race and a class.');
+                return false;
+            }
+        }
+        if (step === 9) {
+            const name = document.getElementById('s9-name').value.trim();
+            if (!name) { alert('Your character needs a name.'); return false; }
+            draft.name = name;
+        }
+        return true;
+    }
+
+    function updateProgress() {
+        const bar = document.getElementById('cc-progress');
+        bar.innerHTML = '';
+        for (let i = 1; i <= CONSTANTS.totalSteps; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'dot' + (i < currentStep ? ' done' : (i === currentStep ? ' current' : ''));
+            bar.appendChild(dot);
+        }
+    }
+
+    function removeRow(containerId, i, type) {
+        if (type === 'item') draft.items.splice(i, 1); renderItems();
+        if (type === 'feature') draft.features.splice(i, 1); renderFeatures();
+        if (type === 'attack') draft.attacks.splice(i, 1); renderAttacks();
+        if (type === 'spell') draft.spells.splice(i, 1); renderSpellList();
+    }
+
+    function gatherSpellInfo() {
+        draft.spellSlots = document.getElementById('s5-spell-slots').value;
+    }
+
+    function copyDomToDraft() {
+        draft.gold = Math.max(0, Number(document.getElementById('s4-gold').value) || 0);
+        draft.otherProficiencies = document.getElementById('s3-other').value.trim();
+        const subSel = document.getElementById('s1-subclass');
+        if (subSel.value === '__custom__') draft.subclass = document.getElementById('s1-subclass-custom').value.trim();
+        else draft.subclass = subSel.value.trim();
+        draft.background = document.getElementById('s1-background').value;
+        draft.alignment = document.getElementById('s9-alignment').value;
+        draft.appearance = document.getElementById('s9-appearance').value;
+        draft.notes = document.getElementById('s9-notes').value;
+        draft.name = document.getElementById('s9-name').value.trim();
+        draft.savingThrows = s3SavesSet.slice();
+        draft.skills = s3SkillsSet.slice();
+        draft.languages = s3LangsSet.slice();
+        draft.spellAbility = document.getElementById('s5-spell-ability').value;
+        gatherSpellInfo();
+        const hp = Number(document.getElementById('s6-maxhp').value);
+        const cur = Number(document.getElementById('s6-curhp').value);
+        if (Number.isFinite(hp) && hp > 0) draft.maxHp = hp;
+        if (Number.isFinite(cur) && cur >= 0) draft.currentHp = cur;
+        const ac = Number(document.getElementById('s6-ac').value);
+        if (Number.isFinite(ac) && ac > 0) draft.ac = ac;
+        const sp = Number(document.getElementById('s6-speed').value);
+        if (Number.isFinite(sp) && sp > 0) draft.speed = sp;
+        draft.traits.personality = document.getElementById('s8-personality').value;
+        draft.traits.ideals = document.getElementById('s8-ideals').value;
+        draft.traits.bonds = document.getElementById('s8-bonds').value;
+        draft.traits.flaws = document.getElementById('s8-flaws').value;
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // Review card
+    // ───────────────────────────────────────────────────────────
+    function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+    function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
+
+    function buildCharacterObject() {
+        copyDomToDraft();
+        const now = new Date().toISOString();
+        const pb = draft.profBonus;
+        return {
+            id: 'char-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+            system: SYSTEM,
+            systemName: SYSTEM_NAME,
+            name: draft.name || 'Unnamed',
+            level: draft.level,
+            race: RACES[draft.race] ? RACES[draft.race].name : draft.race,
+            class: CLASSES[draft.class] ? CLASSES[draft.class].name : draft.class,
+            subclass: draft.subclass,
+            background: draft.background && BACKGROUNDS[draft.background] ? { name: BACKGROUNDS[draft.background].name, bonuses: {} } : null,
+            alignment: draft.alignment,
+            dataSource: null,
+            proficiencyBonus: pb,
+            abilityScores: { ...draft.abilities },
+            maxHp: draft.maxHp,
+            maxHpOverride: null,
+            currentHp: draft.currentHp ?? draft.maxHp,
+            ac: draft.ac,
+            acOverride: null,
+            hitDice: { die: 'd' + classHitDieValue(), total: draft.level, remaining: draft.level },
+            armor: draft.armor ? { name: ARMORS[draft.armor].name, ac: ARMORS[draft.armor].ac, dexCap: ARMORS[draft.armor].dexCap } : null,
+            speed: { walk: draft.speed, fly: null, swim: null, climb: null },
+            longbowHit: null,
+            longbowHitOverride: null,
+            styles: {},
+            savingThrows: draft.savingThrows,
+            skills: draft.skills,
+            languages: draft.languages,
+            otherProficiencies: draft.otherProficiencies,
+            features: draft.features.map(f => ({ name: f.name, description: f.desc })),
+            traits: { ...draft.traits },
+            attacks: draft.attacks.map(a => ({
+                name: a.name,
+                ability: a.ability || 'str',
+                damage: a.damage,
+                range: a.range,
+                attackBonus: pb + abilityMod(draft.abilities[a.ability || 'str'])
+            })),
+            spellcasting: draft.spellcaster ? {
+                ability: draft.spellAbility,
+                saveDC: DC_BASE + pb + abilityMod(draft.abilities[draft.spellAbility]),
+                spellAttack: pb + abilityMod(draft.abilities[draft.spellAbility]),
+                slots: draft.spellSlots,
+                spells: draft.spells
+            } : null,
+            feats: [],
+            resources: {},
+            gold: draft.gold,
+            inventory: { gold: draft.gold, notes: '', items: draft.items.map(it => ({ name: it.name, quantity: it.qty || 1, description: '' })), quickAccessIndices: [] },
+            notes: draft.notes,
+            settings: {},
+            createdAt: now,
+            updatedAt: now
+        };
+    }
+
+    function renderCard() {
+        copyDomToDraft();
+        const obj = buildCharacterObject();
+        const pb = obj.proficiencyBonus;
+        const ab = obj.abilityScores;
+        const mod = (s) => formatMod(abilityMod(s));
+        const skillRows = obj.skills.map(sk => {
+            const abi = SKILL_ABILITIES[sk];
+            return { sk, abi };
+        });
+
+        const armorName = obj.armor ? obj.armor.name : 'No Armor';
+        const traits = obj.traits;
+
+        let html = `
+        <div class="cc-card-sheet">
+            <div class="cc-sheet-header">
+                <div>
+                    <h2>${esc(obj.name)}</h2>
+                    <div class="cc-sheet-sub">${esc(obj.systemName || 'Custom')} · ${esc(obj.race)} ${esc(obj.class)} ${obj.subclass ? '— ' + esc(obj.subclass) : ''} · Lv ${obj.level}</div>
+                    <div class="cc-sheet-sub">${esc(obj.background ? obj.background.name : '')}${obj.alignment ? ' · ' + esc(obj.alignment) : ''}</div>
+                </div>
+                <div class="cc-tag-row" style="flex-direction:column; align-items:flex-end; gap:4px;">
+                    <span class="cs-tag class">${esc(BONUS_LABEL)} ${formatMod(pb)}</span>
+                    <span class="cs-tag race">Init ${mod(ab.dex)}</span>
+                    <span class="cs-tag background">HP ${obj.currentHp}/${obj.maxHp} · AC ${obj.ac}</span>
+                </div>
+            </div>
+            <div class="cc-sheet-body">
+
+                <div class="cc-sheet-grid cols-2">
+                    <div class="cc-block">
+                        <h4>Ability Scores</h4>
+                        <div class="grid-6">
+                            ${ABILITY_KEYS.map(k => `
+                                <div class="cc-ability-big">
+                                    <div class="label">${k.toUpperCase()}</div>
+                                    <div class="score">${ab[k]}</div>
+                                    <div class="mod">${mod(ab[k])}</div>
+                                </div>`).join('')}
+                        </div>
+                    </div>
+                    <div class="cc-block" style="display:grid; gap:8px;">
+                        <h4>Combat</h4>
+                        <div class="grid-3" style="text-align:center;">
+                            <div><div class="cc-ability-big mod" style="font-size:1.2rem;">${obj.maxHp}</div><div class="cc-ability-big label">Max HP</div></div>
+                            <div><div class="cc-ability-big mod" style="font-size:1.2rem;">${obj.ac}</div><div class="cc-ability-big label">AC</div></div>
+                            <div><div class="cc-ability-big mod" style="font-size:1.2rem;">${obj.speed.walk}</div><div class="cc-ability-big label">Speed</div></div>
+                        </div>
+                        <div class="cc-note">Hit Dice: d${classHitDieValue()} × ${obj.level} · Armor: ${esc(armorName)}</div>
+                        <div class="cc-note">HP formula suggestion: ${document.getElementById('s6-formula').textContent}</div>
+                    </div>
+                </div>
+
+                <div class="cc-sheet-grid cols-2">
+                    <div class="cc-block">
+                        <h4>Saving Throws & Skills</h4>
+                        <div class="cc-chips">
+                            ${obj.savingThrows.map(k => `<span class="cc-chip">${k.toUpperCase()} ${formatMod(abilityMod(ab[k]))}</span>`).join('') || '<span class="cc-note">None selected</span>'}
+                        </div>
+                        <div style="height:8px;"></div>
+                        <div class="cc-chips">
+                            ${ABILITY_KEYS.filter(k => skillRows.some(r => r.abi === k)).map(k => `
+                            <div class="cc-sk-row">
+                                <b>${k.toUpperCase()}</b>
+                                ${skillRows.filter(r => r.abi === k).map(r => `<span class="cc-chip">${esc(skillLabel(r.sk))} ${formatMod(pb + abilityMod(ab[r.abi]))}</span>`).join('')}
+                            </div>`).join('') || '<span class="cc-note">No skills selected</span>'}
+                        </div>
+                        <div style="height:8px;"></div>
+                        <div class="cc-note"><b>Languages:</b> ${obj.languages.join(', ') || '—'}</div>
+                        ${obj.otherProficiencies ? `<div class="cc-note"><b>Other:</b> ${esc(obj.otherProficiencies)}</div>` : ''}
+                    </div>
+
+                    <div class="cc-block">
+                        <h4>Attacks</h4>
+                        ${obj.attacks.length ? obj.attacks.map(a => `
+                            <div style="padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <strong>${esc(a.name) || 'Attack'}</strong>
+                                <span class="cc-note">hit ${formatMod(a.attackBonus)} · dmg ${esc(a.damage)} · ${esc(a.range)}</span>
+                            </div>`).join('') : '<div class="cc-note">No attacks defined.</div>'}
+                        ${obj.spellcasting ? `
+                            <div style="height:10px;"></div>
+                            <h4>Spellcasting (${obj.spellcasting.ability.toUpperCase()})</h4>
+                            <div class="cc-note">DC <b>${obj.spellcasting.saveDC}</b> · Attack <b>${formatMod(obj.spellcasting.spellAttack)}</b> · Slots ${esc(obj.spellcasting.slots || '—')}</div>
+                            ${obj.spellcasting.spells ? `<div class="cc-note">${esc(obj.spellcasting.spells)}</div>` : ''}
+                        ` : ''}
+                    </div>
+                </div>
+
+                <div class="cc-sheet-grid">
+                    <div class="cc-block">
+                        <h4>Features & Traits</h4>
+                        <ul style="margin:0; padding-left:18px;">
+                            ${obj.features.filter(f => f.name).map(f => `<li><strong>${esc(f.name)}</strong>${f.description ? ' — ' + esc(f.description) : ''}</li>`).join('') || '<li class="cc-note">No features recorded.</li>'}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="cc-sheet-grid cols-2">
+                    <div class="cc-block"><h4>Personality</h4><div class="cc-note">${esc(traits.personality) || '—'}</div></div>
+                    <div class="cc-block"><h4>Ideals</h4><div class="cc-note">${esc(traits.ideals) || '—'}</div></div>
+                    <div class="cc-block"><h4>Bonds</h4><div class="cc-note">${esc(traits.bonds) || '—'}</div></div>
+                    <div class="cc-block"><h4>Flaws</h4><div class="cc-note">${esc(traits.flaws) || '—'}</div></div>
+                </div>
+
+                ${obj.notes ? `<div class="cc-block"><h4>Notes</h4><div class="cc-note">${esc(obj.notes)}</div></div>` : ''}
+                ${obj.gold ? `<div class="cc-block"><h4>Equipment</h4><div class="cc-note">Gold: ${obj.gold} gp · ${obj.inventory.items.filter(i => i.name).map(i => esc(i.name) + (i.quantity > 1 ? ' ×' + i.quantity : '')).join(', ') || 'No items'}</div></div>` : ''}
+            </div>
+        </div>`;
+        document.getElementById('s10-card').innerHTML = html;
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // Save / Export (compatible with data/characters/<id>.json + registry)
+    // ───────────────────────────────────────────────────────────
+    function loadLocalOverlay() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            const obj = raw ? JSON.parse(raw) : {};
+            return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+        } catch (e) { return {}; }
+    }
+
+    function saveToLocalOverlay() {
+        const obj = loadLocalOverlay();
+        obj[finalChar.id] = finalChar;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+    }
+
+    let finalChar = null;
+
+    function ensureFinalChar() {
+        if (!finalChar) finalChar = buildCharacterObject();
+        return finalChar;
+    }
+
+    function showDialog(title, msg, exportList, primaryLabel) {
+        document.getElementById('dialog-title').textContent = title;
+        document.getElementById('dialog-msg').textContent = msg || '';
+        const listEl = document.getElementById('export-list');
+        listEl.innerHTML = '';
+        (exportList || []).forEach(f => {
+            const row = document.createElement('div');
+            row.className = 'e-row';
+            const code = document.createElement('code');
+            code.textContent = f.path;
+            row.appendChild(code);
+            const b = document.createElement('button');
+            b.className = 'btn btn-secondary-ghost';
+            b.style.cssText = 'flex:0;padding:4px 10px;font-size:0.8rem;';
+            b.textContent = '⬇';
+            b.onclick = () => downloadJson(f.path, JSON.stringify(f.json, null, 2));
+            row.appendChild(b);
+            listEl.appendChild(row);
+        });
+        const primary = document.getElementById('dialog-primary');
+        primary.textContent = primaryLabel || 'OK';
+        document.getElementById('dialog-overlay').classList.remove('hidden');
+    }
+
+    function closeDialog() { document.getElementById('dialog-overlay').classList.add('hidden'); }
+
+    function downloadJson(filename, content) {
+        const blob = new Blob([content], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+    }
+
+    function finishSave() {
+        finalChar = buildCharacterObject();
+        saveToLocalOverlay();
+        showDialog('Character saved ✓', `"${finalChar.name}" is now saved in your browser and will appear on the Character Select page. Use Export to add the JSON files into the data/ folder.`);
+    }
+
+    function finishExport() {
+        finalChar = buildCharacterObject();
+        saveToLocalOverlay();
+        const files = [];
+        files.push({ path: `data/characters/${finalChar.id}.json`, json: finalChar });
+        files.push({ path: 'data/characters.json', json: buildRegistry() });
+        showDialog('Export character files', 'Download each file and place it in the matching path in your repo.', files);
+    }
+
+    function buildRegistry() {
+        const list = Object.values(loadLocalOverlay()).map(c => c);
+        return {
+            version: 2,
+            meta: { description: 'Registry of RPG character files for character-select.html', schema: 'player-data-v2', updated: new Date().toISOString().slice(0, 10) },
+            characters: list.map(c => ({
+                id: c.id,
+                file: `characters/${c.id}.json`,
+                name: c.name,
+                level: c.level,
+                race: c.race,
+                class: c.class,
+                subclass: c.subclass || '',
+                background: c.background && typeof c.background === 'object' ? c.background.name : c.background,
+                system: c.system || '',
+                systemName: c.systemName || ''
+            }))
+        };
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // Init
+    // ───────────────────────────────────────────────────────────
+    function init() {
+        renderSystemGrid();
+        renderAbilityGrid();
+
+        fillSelect(document.getElementById('s1-race'), RACES, '');
+        fillSelect(document.getElementById('s1-class'), CLASSES, '');
+        fillSelect(document.getElementById('s1-background'), BACKGROUNDS, '');
+        document.getElementById('s1-race-hint').textContent = RACES[''].notes || '';
+        document.getElementById('s1-class-hint').textContent = CLASSES[''].notes || '';
+        refreshSubclassOptions();
+
+        fillArmorSelect();
+        fillWeaponsChips();
+        renderItems();
+        renderGearPicker();
+        renderAttacks();
+        renderFeatures();
+
+        // auto begin with standard array applied
+        applyStandardArray();
+        draft.profBonus = PROF_BONUS(draft.level);
+        refreshCombatSuggestions();
+        rebuildStep3();
+        document.getElementById('s1-pb').textContent = formatMod(PROF_BONUS(draft.level));
+        updateProgress();
+    }
+
+    init();
+    </script>
+</body>
+</html>

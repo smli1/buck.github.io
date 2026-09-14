@@ -1,0 +1,47 @@
+{
+  "id": "player-1",
+  "name": "巴克",
+  "level": 9,
+  "race": "Human",
+  "class": "Fighter",
+  "subclass": "Champion",
+  "background": { "name": "士兵", "bonuses": { "dex": 2 } },
+  "alignment": "Chaotic Neutral",
+  "dataSource": null,
+  "proficiencyBonus": 4,
+  "abilityScores": { "str": 13, "dex": 15, "con": 14, "int": 11, "wis": 11, "cha": 8 },
+  "maxHp": 76,
+  "maxHpOverride": null,
+  "currentHp": 76,
+  "ac": 18,
+  "acOverride": null,
+  "hitDice": { "die": "d10", "total": 9, "remaining": 9 },
+  "armor": null,
+  "speed": { "walk": 30, "fly": null, "swim": null, "climb": null },
+  "longbowHit": 11,
+  "longbowHitOverride": null,
+  "styles": { "defense": true, "archery": false },
+  "savingThrows": ["str", "con"],
+  "skills": ["acrobatics", "athletics", "perception", "stealth"],
+  "feats": [
+    { "name": "Great Weapon Master", "bonuses": { "dex": 1, "rangedDamage": 4 } },
+    { "name": "Sharpshooter", "bonuses": { "dex": 1 } },
+    { "name": "Mage Slayer", "bonuses": { "dex": 1 } },
+    { "name": "Savage Attacker", "bonuses": {} },
+    { "name": "Lucky", "bonuses": {} }
+  ],
+  "resources": {},
+  "gold": 200,
+  "inventory": {
+    "gold": 200,
+    "notes": "",
+    "items": [
+      { "name": "箭", "quantity": 50, "description": "" }
+    ],
+    "quickAccessIndices": []
+  },
+  "notes": "9 等戰士：敏捷流的誓約弓射手 (Longbow build)。",
+  "settings": {},
+  "createdAt": "2025-01-01T00:00:00.000Z",
+  "updatedAt": "2026-09-11T00:00:00.000Z"
+}
