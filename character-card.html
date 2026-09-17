@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📇 Character Card</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="character-creator/creator.css">
+    <style>
+        body { background: var(--bg, #1a1d29); }
+        .card-wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 40px; }
+        .card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+        #card-status { min-height: 1.4em; }
+    </style>
+</head>
+<body>
+    <div class="card-wrap">
+        <div class="card-header">
+            <h1>📇 Character Card</h1>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn btn-secondary-ghost" onclick="history.back()">← Back</button>
+                <a class="btn btn-secondary-ghost" style="text-decoration:none;" href="index.html">Character Select</a>
+            </div>
+        </div>
+        <div id="card-status" class="cc-note">Loading…</div>
+        <div id="card-root"></div>
+    </div>
+
+    <script src="character-creator/card-view.js"></script>
+    <script>
+        const STORAGE_KEY_CARD = 'rpg_characters_v2';
+        const CARD_STATUS = document.getElementById('card-status');
+
+        function setCardStatus(text, isError) {
+            CARD_STATUS.textContent = text;
+            CARD_STATUS.className = 'cc-note' + (isError ? '' : '');
+        }
+
+        function loadOverlay() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY_CARD);
+                const obj = raw ? JSON.parse(raw) : {};
+                return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        async function loadFromData(id) {
+            try {
+                const reg = await (await fetch('data/characters.json')).json();
+                const list = Array.isArray(reg) ? reg : (Array.isArray(reg.characters) ? reg.characters : []);
+                const entry = list.find(e => String(e.id) === String(id));
+                if (!entry) return null;
+                const file = String(entry.file || ('characters/' + id + '.json'));
+                const res = await fetch('data/' + file);
+                return res.ok ? await res.json() : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function init() {
+            const params = new URLSearchParams(window.location.search);
+            let id = params.get('id');
+            if (!id) id = params.get('character');
+            if (!id && window.character && window.character.data && window.character.data.id) id = window.character.data.id;
+            if (!id) id = localStorage.getItem('active_character_id');
+            if (!id) {
+                // last resort: show the first available local character
+                const overlay = loadOverlay();
+                const first = Object.keys(overlay)[0];
+                id = first || null;
+            }
+            if (!id) {
+                setCardStatus('No character to display. Create or launch a character first.', true);
+                document.getElementById('card-root').innerHTML =
+                    '<p class="cc-note">Head to the <a href="index.html" style="color:var(--secondary);">character select</a> page and launch one.</p>';
+                return;
+            }
+
+            let ch = loadOverlay()[id] || null;
+            if (!ch) ch = await loadFromData(id);
+            if (!ch) {
+                setCardStatus('Character "' + id + '" was not found.', true);
+                document.getElementById('card-root').innerHTML =
+                    '<p class="cc-note">It may need to be re-saved in the Guided Creator or re-exported into <code>data/characters/</code>.</p>';
+                return;
+            }
+
+            document.title = '📇 ' + (ch.name || 'Character') + ' — Character Card';
+            setCardStatus('');
+            if (typeof window.CardView === 'function' || (window.CardView && window.CardView.renderInto)) {
+                window.CardView.renderInto(document.getElementById('card-root'), ch);
+            } else {
+                document.getElementById('card-root').textContent =
+                    'Card renderer not loaded. Open with a web server (python -m http.server) so the JS modules can load.';
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

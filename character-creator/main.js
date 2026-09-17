@@ -32,6 +32,17 @@
         renderStepDictionaries();
         attachDictInputs();
         syncDictionaryHighlights();
+
+        // restore an in-progress draft (new-character flow)
+        restoreDraft();
+
+        // auto-save the draft on any interaction (debounced)
+        document.addEventListener('input', scheduleAutosave, true);
+        document.addEventListener('change', scheduleAutosave, true);
+        document.addEventListener('click', scheduleAutosave, true);
+
+        // edit mode (?edit=<id>) — preload an existing character after the UI is built
+        initEditMode();
     }
 
     init();

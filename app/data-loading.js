@@ -1,7 +1,7 @@
 import { Character } from '../core/character.js';
 
 function resolveDataUrl(filename) {
-    return new URL(`./data/${filename}`, import.meta.url);
+    return new URL(`../data/${filename}`, import.meta.url);
 }
 
 export async function loadDefaultCharacterFromDataFile() {

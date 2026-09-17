@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>t0</title></head>
+<body>
+<script>
+  setTimeout(() => { document.title = 'done-' + (+new Date()); const d = document.createElement('div'); d.id='M'; d.textContent='MUTATED'; document.body.appendChild(d); }, 100);
+</script>
+<p>hello</p>
+</body>
+</html>

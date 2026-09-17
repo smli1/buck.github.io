@@ -9,6 +9,244 @@
 </head>
 <body>
 
+    <!-- ⚔️ Character Select (first page, merged from character-select.html) -->
+    <div id="character-select-screen" class="character-select-screen">
+        <div class="cs-container">
+            <div class="cs-header">
+                <h1>⚔️ Character Select</h1>
+                <div class="cs-header-actions">
+                    <span id="cs-status" class="cs-status loading">Loading roster…</span>
+                    <button class="btn btn-ghost" style="flex:0; padding:8px 14px;" onclick="reloadRoster()">↻ Reload</button>
+                    <button class="btn btn-ghost" style="flex:0; padding:8px 14px;" onclick="exportRoster()">⬇ Export files</button>
+                    <button class="btn" style="flex:0; padding:8px 14px;" onclick="openCreator()">+ New Character</button>
+                    <button class="btn btn-ghost" style="flex:0; padding:8px 14px;" onclick="openCreator()">✨ Guided Creator (recommended)</button>
+                </div>
+            </div>
+
+            <!-- Draft (in-progress Guided Creator record — its own section, never launchable) -->
+            <div id="cs-draft-section" class="cs-draft-section hidden">
+                <div class="cs-section-title">✍️ Draft — In Progress</div>
+                <div class="cs-section-sub">Unfinished character from the Guided Creator. Not playable until you finish and save it.</div>
+                <div id="cs-draft-card" class="cs-draft-card"></div>
+            </div>
+
+            <div class="cs-section-title">Your Characters</div>
+            <div id="cs-slots" class="cs-slots-grid"></div>
+        </div>
+
+        <!-- Editor Overlay -->
+        <div id="cs-editor-overlay" class="cs-editor-overlay hidden">
+            <div class="cs-editor">
+                <div class="cs-editor-header">
+                    <h2 id="cs-editor-title">New Character</h2>
+                    <button class="btn-icon" onclick="closeEditor()">✕</button>
+                </div>
+                <div class="cs-editor-body">
+                    <div class="cs-form-section">
+                        <div class="cs-form-section-title">Basic Info</div>
+                        <div class="cs-form-row">
+                            <div class="cs-field">
+                                <label>Character Name</label>
+                                <input id="cs-name" type="text" placeholder="e.g. Aragorn" />
+                            </div>
+                            <div class="cs-field">
+                                <label>Level</label>
+                                <input id="cs-level" type="number" min="1" max="20" value="1" />
+                            </div>
+                        </div>
+                        <div class="cs-form-row three-col">
+                            <div class="cs-field">
+                                <label>Race</label>
+                                <select id="cs-race">
+                                    <option value="">-- Select --</option>
+                                    <option value="Human">Human</option>
+                                    <option value="Elf">Elf</option>
+                                    <option value="Dwarf">Dwarf</option>
+                                    <option value="Halfling">Halfling</option>
+                                    <option value="Half-Elf">Half-Elf</option>
+                                    <option value="Half-Orc">Half-Orc</option>
+                                    <option value="Tiefling">Tiefling</option>
+                                    <option value="Dragonborn">Dragonborn</option>
+                                    <option value="Gnome">Gnome</option>
+                                    <option value="Goliath">Goliath</option>
+                                    <option value="Aasimar">Aasimar</option>
+                                    <option value="Firbolg">Firbolg</option>
+                                    <option value="Kenku">Kenku</option>
+                                    <option value="Tabaxi">Tabaxi</option>
+                                    <option value="Tortle">Tortle</option>
+                                    <option value="Bugbear">Bugbear</option>
+                                    <option value="Goblin">Goblin</option>
+                                    <option value="Hobgoblin">Hobgoblin</option>
+                                    <option value="Kobold">Kobold</option>
+                                    <option value="Orc">Orc</option>
+                                    <option value="Yuan-Ti">Yuan-Ti Pureblood</option>
+                                </select>
+                            </div>
+                            <div class="cs-field">
+                                <label>Class</label>
+                                <select id="cs-class">
+                                    <option value="">-- Select --</option>
+                                    <option value="Barbarian">Barbarian</option>
+                                    <option value="Bard">Bard</option>
+                                    <option value="Cleric">Cleric</option>
+                                    <option value="Druid">Druid</option>
+                                    <option value="Fighter">Fighter</option>
+                                    <option value="Monk">Monk</option>
+                                    <option value="Paladin">Paladin</option>
+                                    <option value="Ranger">Ranger</option>
+                                    <option value="Rogue">Rogue</option>
+                                    <option value="Sorcerer">Sorcerer</option>
+                                    <option value="Warlock">Warlock</option>
+                                    <option value="Wizard">Wizard</option>
+                                </select>
+                            </div>
+                            <div class="cs-field">
+                                <label>Background</label>
+                                <select id="cs-background">
+                                    <option value="">-- Select --</option>
+                                    <option value="Acolyte">Acolyte</option>
+                                    <option value="Charlatan">Charlatan</option>
+                                    <option value="Criminal">Criminal</option>
+                                    <option value="Entertainer">Entertainer</option>
+                                    <option value="Folk Hero">Folk Hero</option>
+                                    <option value="Guild Artisan">Guild Artisan</option>
+                                    <option value="Hermit">Hermit</option>
+                                    <option value="Noble">Noble</option>
+                                    <option value="Outlander">Outlander</option>
+                                    <option value="Sage">Sage</option>
+                                    <option value="Sailor">Sailor</option>
+                                    <option value="Soldier">Soldier</option>
+                                    <option value="Urchin">Urchin</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="cs-form-row">
+                            <div class="cs-field">
+                                <label>Alignment</label>
+                                <select id="cs-alignment">
+                                    <option value="">-- Select --</option>
+                                    <option value="Lawful Good">Lawful Good</option>
+                                    <option value="Neutral Good">Neutral Good</option>
+                                    <option value="Chaotic Good">Chaotic Good</option>
+                                    <option value="Lawful Neutral">Lawful Neutral</option>
+                                    <option value="True Neutral">True Neutral</option>
+                                    <option value="Chaotic Neutral">Chaotic Neutral</option>
+                                    <option value="Lawful Evil">Lawful Evil</option>
+                                    <option value="Neutral Evil">Neutral Evil</option>
+                                    <option value="Chaotic Evil">Chaotic Evil</option>
+                                </select>
+                            </div>
+                            <div class="cs-field">
+                                <label>Data Source</label>
+                                <select id="cs-source">
+                                    <option value="">-- Select --</option>
+                                    <option value="PHB">PHB 2014</option>
+                                    <option value="XPHB">PHB 2024</option>
+                                    <option value="XGE">Xanathar's Guide</option>
+                                    <option value="TCE">Tasha's Cauldron</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cs-form-section">
+                        <div class="cs-form-section-title">Ability Scores</div>
+                        <div class="cs-abilities-grid">
+                            <div class="cs-ability-input">
+                                <span class="cs-ability-label">STR</span>
+                                <input id="cs-ability-str" type="number" min="1" max="30" value="10" oninput="updateAbilityMod(this, 'cs-mod-str')" />
+                                <span class="cs-ability-mod" id="cs-mod-str">+0</span>
+                            </div>
+                            <div class="cs-ability-input">
+                                <span class="cs-ability-label">DEX</span>
+                                <input id="cs-ability-dex" type="number" min="1" max="30" value="10" oninput="updateAbilityMod(this, 'cs-mod-dex')" />
+                                <span class="cs-ability-mod" id="cs-mod-dex">+0</span>
+                            </div>
+                            <div class="cs-ability-input">
+                                <span class="cs-ability-label">CON</span>
+                                <input id="cs-ability-con" type="number" min="1" max="30" value="10" oninput="updateAbilityMod(this, 'cs-mod-con')" />
+                                <span class="cs-ability-mod" id="cs-mod-con">+0</span>
+                            </div>
+                            <div class="cs-ability-input">
+                                <span class="cs-ability-label">INT</span>
+                                <input id="cs-ability-int" type="number" min="1" max="30" value="10" oninput="updateAbilityMod(this, 'cs-mod-int')" />
+                                <span class="cs-ability-mod" id="cs-mod-int">+0</span>
+                            </div>
+                            <div class="cs-ability-input">
+                                <span class="cs-ability-label">WIS</span>
+                                <input id="cs-ability-wis" type="number" min="1" max="30" value="10" oninput="updateAbilityMod(this, 'cs-mod-wis')" />
+                                <span class="cs-ability-mod" id="cs-mod-wis">+0</span>
+                            </div>
+                            <div class="cs-ability-input">
+                                <span class="cs-ability-label">CHA</span>
+                                <input id="cs-ability-cha" type="number" min="1" max="30" value="10" oninput="updateAbilityMod(this, 'cs-mod-cha')" />
+                                <span class="cs-ability-mod" id="cs-mod-cha">+0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cs-form-section">
+                        <div class="cs-form-section-title">HP & AC</div>
+                        <div class="cs-form-row three-col">
+                            <div class="cs-field">
+                                <label>Max HP</label>
+                                <input id="cs-maxhp" type="number" min="1" placeholder="Auto if empty" />
+                            </div>
+                            <div class="cs-field">
+                                <label>AC</label>
+                                <input id="cs-ac" type="number" min="1" placeholder="Auto if empty" />
+                            </div>
+                            <div class="cs-field">
+                                <label>Hit Dice</label>
+                                <select id="cs-hitdice">
+                                    <option value="d6">d6</option>
+                                    <option value="d8">d8</option>
+                                    <option value="d10" selected>d10</option>
+                                    <option value="d12">d12</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cs-form-section">
+                        <div class="cs-form-section-title">Notes</div>
+                        <div class="cs-field">
+                            <textarea id="cs-notes" rows="3" placeholder="Backstory, personality traits, etc."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="cs-editor-footer">
+                    <button class="btn btn-icon" style="flex:0; padding:8px 16px;" onclick="closeEditor()">Cancel</button>
+                    <button class="btn" onclick="saveRosterCharacter()">Save Character</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Dialog -->
+        <div id="cs-export" class="cs-confirm-overlay hidden" onclick="if(event.target===this) closeExport();">
+            <div class="cs-confirm-box" style="max-width:460px;width:100%;">
+                <p style="font-weight:700;font-size:1rem;">Export character files</p>
+                <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:12px;">Download the JSON files below, then replace the matching files under <code>data/</code> in your repo.</p>
+                <div id="cs-export-list" style="display:grid;gap:6px;margin-bottom:16px;"></div>
+                <div class="cs-confirm-actions" style="flex-wrap:wrap;">
+                    <button class="btn btn-icon" style="flex:0 1 auto;padding:8px 14px;background:rgba(255,255,255,0.08);" onclick="closeExport()">Done</button>
+                    <button class="btn" style="flex:0 1 auto;" onclick="downloadAllExport()">Download all</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirm Dialog -->
+        <div id="cs-confirm" class="cs-confirm-overlay hidden">
+            <div class="cs-confirm-box">
+                <p id="cs-confirm-msg">Are you sure?</p>
+                <div class="cs-confirm-actions">
+                    <button class="btn btn-icon" style="flex:0 1 100px; padding:8px 12px; background:rgba(255,255,255,0.08);" onclick="closeConfirm()">Cancel</button>
+                    <button class="btn btn-delete" id="cs-confirm-ok" onclick="confirmAction()">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="page-flip-shell" id="page-flip-shell">
         <section class="page-face front-face is-active">            
             
@@ -130,9 +368,14 @@
             </div>
             
             <header class="page-header" style="display:flex; align-items:center; justify-content:space-between;">
-                <h1 style="margin:0;">⚔️ 巴克 Battle Control Panel</h1>
+                <h1 style="margin:0; line-height:1.2;">
+                    <span id="bp-title">⚔️ 戰鬥面板</span><br>
+                    <span id="bp-subtitle" style="font-size:0.85rem; color:var(--text-muted); font-weight:600;"></span>
+                </h1>
                 <div class="header-actions">
                     <button class="btn-icon" type="button" data-page-toggle="true" onclick="togglePageFlip()" aria-label="Switch page" title="切換頁面">🎭 Role-Playing</button>
+                    <button id="switch-character-btn" class="btn-icon" onclick="openCharacterSelect()" aria-label="Switch character" title="切換角色">👤</button>
+                    <button class="btn-icon" onclick="openActiveCard()" aria-label="Character card" title="角色卡">📇</button>
                     <button id="inventory-cog" class="btn-icon" onclick="openInventoryPopup()" aria-label="Inventory" title="背包">🎒</button>
                     <button id="settings-cog" class="btn-icon" onclick="openSettingsPopup()" aria-label="Settings" title="設定">⚙️</button>
                 </div>
@@ -173,90 +416,43 @@
                     </div>
 
 
-                    <details style="margin-bottom:6px;" >
-                        <summary style="font-weight:700; color:var(--secondary);">升級專長路線（4 / 6 / 8 等）</summary>
+                    <details style="margin-top:4px;">
+                        <summary style="font-weight:700; color:var(--accent);">職業特性 / 專長（摘要）</summary>
                         <div style="margin-top:8px;">
-                            <!-- <p class="tooltip-note">長按或滑鼠停留於關鍵詞可查看術語說明。</p> -->
-                            <ol>
-                                <li><strong>4 等</strong>：<span class="keyword" data-tooltip="Great Weapon Master：可在重武器攻擊命中後追加一次額外攻擊，並提高暴擊傷害。">Great Weapon Master</span> — +1 DEX（DEX→18）</li>
-                                <li><strong>6 等</strong>：<span class="keyword" data-tooltip="Sharpshooter：可忽視遠程攻擊對中距離遮蔽的懲罰，並可額外選擇造成 -5 命中換 +10 傷害。">Sharpshooter</span> — +1 DEX（DEX→19）</li>
-                                <li><strong>8 等</strong>：<span class="keyword" data-tooltip="Mage Slayer：在附近敵人施法時可獲得額外攻擊機會，並對敵人造成法術攻擊時取得優勢。">Mage Slayer</span> — +1 DEX（DEX→20，達滿值 +5）</li>
-                            </ol>
-                        </div>
-                    </details>
-
-                    <details style="margin-bottom:6px;">
-                        <summary style="font-weight:700; color:var(--accent);">1 等天賦 / 雙專長</summary>
-                        <div style="margin-top:8px;">
-                            <!-- <p class="tooltip-note">停留或長按下列關鍵詞以查看深入說明。</p> -->
-                            <ul>
-                                <li><span class="keyword" data-tooltip="Savage Attacker：當你造成武器傷害時，可重擲傷害骰一次，並選擇較高值。">Savage Attacker</span>：1d8 遠程傷害在 1-2 可重骰取高。</li>
-                                <li><span class="keyword" data-tooltip="Lucky：每日 4 次幸運點，可用於重新擲一個 d20 或使敵方攻擊重擲。">Lucky</span>：每日 4 點幸運點，提供擲骰控制。</li>
-                                <li><span class="keyword" data-tooltip="Heroic Inspiration：長休後獲得一次重骰機會，可對攻擊檢定、能力檢定或豁免檢定使用。">Heroic Inspiration</span>：長休後獲得一次重骰機會。</li>
+                            <ul id="panel-features">
+                                <li>Loading...</li>
                             </ul>
                         </div>
                     </details>
-
-                    <details>
-                        <summary style="font-weight:700; color:#f59e0b;">9 等最終數據（快速一覽）</summary>
-                        <div style="margin-top:8px;">
-                            <!-- <p class="tooltip-note">將游標移到數值前詞彙，可查看其來源與計算方式。</p> -->
-                            <ul>
-                                <li><span class="keyword" data-tooltip-key="longbow" data-tooltip="">長弓命中：<span id="summary-longbow-hit">--</span></span>（敏捷調整值 / 熟練加值 / 箭術風格）</li>
-                                <li><span class="keyword" data-tooltip="盜賊工具：+9（來自熟練加值與工具熟練）。">盜賊工具（開鎖/陷阱）：+9</span></li>
-                                <li><span class="keyword" data-tooltip="潛行：+9（來自 DEX +5、熟練 +4；鑲釘皮甲不阻礙）。">潛行：+9</span>（戴鑲釘皮甲不阻礙）</li>
-                                <li><span class="keyword" data-tooltip-key="ac" data-tooltip="">AC：<span id="summary-ac">--</span></span>（鑲釘皮甲 12 + DEX 5 + 防禦風格 1）</li>
-                                <li><span class="keyword" data-tooltip-key="hp" data-tooltip="">Max HP：<span id="summary-max-hp">--</span></span></li>
-                            </ul>
-                        </div>
-                    </details>
-
-                    <details style="margin-top:8px;">
-                        <summary style="font-weight:700; color:var(--accent);">9 等戰士特性速查</summary>
-                        <div style="margin-top:8px; line-height:1.5; font-size:0.95rem;">
-                            <!-- <p class="tooltip-note">懸停或長按特定詞彙可查看詳細效果。</p> -->
-                            <ul>
-                                <li><strong>等級 1</strong>：<span class="keyword" data-tooltip="戰鬥風格：首次選擇一項戰鬥風格，之後每次升級可更換。推薦防禦風格以提升 AC。">戰鬥風格</span>，選擇一項戰鬥風格，建議防禦；每次升級可更換。</li>
-                                <li><strong>等級 1</strong>：<span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值。短休後可使用一次，長休恢復。">回氣</span>，附贈動作恢復 1d10 + 戰士等級生命值，短休恢復 1 次，長休恢復所有。</li>
-                                <li><strong>等級 1</strong>：<span class="keyword" data-tooltip="武器精通：可在三種簡易或軍用武器中選擇精通，長休後可更換一種。">武器精通</span>，選三種簡易或軍用精通武器，長休可改選一種。</li>
-                                <li><strong>等級 2</strong>：<span class="keyword" data-tooltip="動作如潮：本回合可額外獲得一個動作。短休或長休後恢復。17 級後每次休息可用 2 次。">動作如潮</span>，本回合可額外獲得一個動作，短休或長休後恢復；17 級後每次休息可用 2 次。</li>
-                                <li><strong>等級 2</strong>：<span class="keyword" data-tooltip="戰術思維：當屬性檢定失敗時，消耗回氣加上 1d10 的結果，嘗試接近成功。">戰術思維</span>，屬性檢定失敗時可消耗一次回氣，加入 1d10 以接近成功。</li>
-                                <li><strong>等級 3</strong>：<span class="keyword" data-tooltip="選擇戰士子職，並獲得其對應能力，例如誓約之王、狂戰士等。">選擇戰士子職</span>，並獲得其對應能力。</li>
-                                <li><strong>等級 3</strong>：<span class="keyword" data-tooltip="精通重擊：武器或重擊攻擊 19-20 即為暴擊。">精通重擊</span>，武器或重擊攻擊 19-20 即暴擊。</li>
-                                <li><strong>等級 3</strong>：<span class="keyword" data-tooltip="運動健將：先攻與某些力量檢定具優勢；重擊後可移動一半速度且不引發借機攻擊。">運動健將</span>，先攻與力量（運動）檢定具優勢；重擊後可移動一半速度且不引發借機攻擊。</li>
-                                <li><strong>等級 4</strong>：能力值提升，可提升屬性值或選專長。</li>
-                                <li><strong>等級 5</strong>：額外攻擊，攻擊動作可攻擊兩次。</li>
-                                <li><strong>等級 5</strong>：<span class="keyword" data-tooltip="戰術轉進：使用回氣附贈動作時可移動一半速度且不引發借機攻擊。">戰術轉進</span>，使用回氣附贈動作時可移動一半速度且不引發借機攻擊。</li>
-                                <li><strong>等級 6</strong>：能力值提升。</li>
-                                <li><strong>等級 7</strong>：額外戰鬥風格，獲得另一項戰鬥風格。</li>
-                                <li><strong>等級 8</strong>：能力值提升。</li>
-                                <li><strong>等級 9</strong>：<span class="keyword" data-tooltip="不屈：豁免檢定失敗時可重投，並加上戰士等級的固定值。須採用新結果，長休恢復。">不屈</span>，豁免失敗時重投並加上戰士等級，須使用新結果；長休後恢復使用次數。</li>
-                                <li><strong>等級 9</strong>：<span class="keyword" data-tooltip="戰術主宰：命中時可將精通詞條效果改為推離、削弱或緩速三選一。">戰術主宰</span>，攻擊時可將精通詞條效果改為推離、削弱或緩速之一。</li>
-                            </ul>
-                        </div>
-                    </details>
-                </div>
-            </details>
-
-            <!-- 📊 基礎防禦與機制 -->
+            <!-- 📊 基礎戰鬥數據 -->
             <div class="card">
-                <!-- <p class="tooltip-note">將游標移到數值前詞彙，可查看其來源與計算方式。</p> -->
                 <div class="stats-grid">
                     <div class="stat-box">
                         <span class="stat-label">🛡️ 防禦度 (AC)</span>
-                        <span class="stat-value keyword" id="stat-ac" data-tooltip-key="ac" data-tooltip="">--</span>
+                        <span class="stat-value" id="stat-ac">--</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">🩸 生命值 (HP)</span>
+                        <span class="stat-value" id="stat-hp">--</span>
                     </div>
                     <div class="stat-box">
                         <span class="stat-label">⚡ 先攻檢定</span>
-                        <span class="stat-value keyword" style="color:var(--secondary)" data-tooltip="先攻檢定：擲兩個 d20，取較高的結果，視為永久優勢。">永久優勢</span>
+                        <span class="stat-value keyword" style="color:var(--secondary)" id="panel-init" data-tooltip="先攻 = d20 + 應捷調整值。">--</span>
                     </div>
-                    <div class="stat-box" style="grid-column: span 2; border-left: 3px solid var(--primary);">
+                    <div class="stat-box">
+                        <span class="stat-label">熟練加值</span>
+                        <span class="stat-value" id="panel-prof">--</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">速度</span>
+                        <span class="stat-value" id="panel-speed">--</span>
+                    </div>
+                    <div class="stat-box" style="border-left:3px solid var(--primary);">
                         <span class="stat-label">🎯 暴擊要求</span>
-                        <span class="stat-value keyword" style="color:var(--primary); font-size:1.05rem;" data-tooltip="暴擊要求：當 d20 擲出 19 或 20 時，攻擊將造成暴擊，通常為傷害骰翻倍。">d20 擲出 19-20 即<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>！</span>
+                        <span class="stat-value" style="color:var(--primary); font-size:1.05rem;" id="panel-crit">--</span>
                     </div>
                 </div>
             </div>
-
             <!-- 🩸 HP 狀態管理 -->
             <div class="card">
                 <!-- <p class="tooltip-note">將游標移到數值前詞彙，可查看其來源與計算方式。</p> -->
@@ -270,57 +466,15 @@
                 </div>
             </div>
 
-            <!-- 🔋 大招資源追蹤 -->
+            <!-- 🔋 資源與狀態追蹤 -->
             <div class="card">
-                <!-- <p class="tooltip-note">將游標移到數值前詞彙，可查看其來源與計算方式。</p> -->
-                <span class="stat-label" style="font-size:0.9rem; color:#fff; font-weight:700; margin-bottom:8px;">🔋 核心資源追蹤</span>
-                <div class="tracker-row" data-resource="secondwind">
-                    <span><span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值。短休後可使用一次，長休恢復。">🩸 回氣</span> (長休 4 次)</span>
-                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                        <div class="checkbox-group" data-resource-group="secondwind">
-                            <input type="checkbox" class="tracker-checkbox">
-                            <input type="checkbox" class="tracker-checkbox">
-                            <input type="checkbox" class="tracker-checkbox">
-                            <input type="checkbox" class="tracker-checkbox">
-                        </div>
-                    </div>
-                </div>
-                <div class="tracker-row" data-resource="lucky">
-                    <span>🍀 <span class="keyword" data-tooltip="Lucky：每日 4 次幸運點，可用於重新擲一個 d20 或使敵方攻擊重擲。">Lucky</span> (長休 4 次)</li></span>
-                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                        <div class="checkbox-group">
-                            <input type="checkbox" class="tracker-checkbox">
-                            <input type="checkbox" class="tracker-checkbox">
-                            <input type="checkbox" class="tracker-checkbox">
-                            <input type="checkbox" class="tracker-checkbox">
-                        </div>
-                    </div>
-                </div>
-                <div class="tracker-row" data-resource="heroic-inspiration">
-                    <span>⭐ <span class="keyword" data-tooltip="Heroic Inspiration：長休後獲得一次重骰機會，可對攻擊檢定、能力檢定或豁免檢定使用。">英雄激勵</span> (長休 1 次)</span>
-                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                        <input type="checkbox" class="tracker-checkbox">
-                    </div>
-                </div>
-                <div class="tracker-row" data-resource="action-surge">
-                    <span>🕺🏻 <span class="keyword" data-tooltip="動作如潮：本回合可額外獲得一個動作。短休或長休後恢復。17 級後每次休息可用 2 次。">動作如潮</span> (短/長休 1 次)</span>
-                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                        <input type="checkbox" class="tracker-checkbox" data-resource-group="action-surge">
-                    </div>
-                </div>
-                <div class="tracker-row" data-resource="unyielding">
-                    <span>🛡️ 反應：<span class="keyword" data-tooltip="不屈：豁免檢定失敗時可重投，並加上戰士等級的固定值。須採用新結果，長休恢復。">不屈重投</span> (長休 1 次)</span>
-                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                        <input type="checkbox" class="tracker-checkbox" data-resource-group="unyielding">
-                    </div>
-                </div>
-                
+                <span class="stat-label" style="font-size:0.9rem; color:#fff; font-weight:700; margin-bottom:8px;">🔋 資源 / 狀態追蹤</span>
+                <div id="panel-resources"></div>
                 <div style="margin:12px 0; border-color:var(--border-color);"></div>
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
                     <button class="btn" type="button" data-rest-mode="short" style="padding:4px 8px; font-size:0.8rem;">短休</button>
                     <button class="btn" type="button" data-rest-mode="long" style="padding:4px 8px; font-size:0.8rem;">長休</button>
                 </div>
-                <!-- settings popup is available via the cog button in the header -->
             </div>
 <div class="quick-item-access-panel">
                     <div class="manual-popup-section-title">快速物品存取</div>
@@ -365,120 +519,9 @@
         <!-- ➡️ 右側欄位：回合步驟與即時日誌 -->
         <div class="content-area">
             
-            <!-- 第一步 -->
-            <div class="card">
-                <div class="step-header">
-                    <span class="step-title">第一步：附贈動作 (Bonus Action)</span>
-                    <span class="step-badge">二選一</span>
-                </div>
-                <div class="action-card">
-                    <div class="action-name">🏹 <span class="keyword" data-tooltip="誓約之敵：附贈動作宣告目標為你的誓約之敵，攻擊該目標通常獲得優勢並造成額外誓約傷害。">宣告誓約之敵</span></div>
-                    <div class="action-desc">射擊永久自帶<span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>、無視半掩體、命中加 3d6 傷害。</div>
-                    <button class="btn btn-phrase" onclick="copyText('我用附贈動作對 Boss 宣告誓約弓鎖定。')">📋 複製台詞報給 DM</button>
-                </div>
-                <div class="action-card">
-                    <div class="action-name">🩸 <span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值，短休後可使用一次，長休可恢復全部。">啟動回氣補血</span></div>
-                    <div class="action-desc">恢復 1d10+9 生命，免費瞬移 15 呎且不引發借機。</div>
-                    <div class="btn-group">
-                        <button class="btn btn-phrase" onclick="copyText('我用附贈動作啟動【回氣】，恢復生命值，並觸發【戰術轉進】免費瞬移 15 呎不引發借機！')">📋 複製台詞</button>
-                        <button class="btn btn-roll" style="background:#475569;"  onclick="openManualPopup('secondwind')">🛠 手動骰輸入</button>
-                        <!-- <button class="btn btn-roll" onclick="rollSecondWind()">🎲 補血計算</button> -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- 第二步 -->
-            <div class="card">
-                <div class="step-header">
-                    <span class="step-title">第二步：主要動作 (Action)</span>
-                    <span class="step-badge">二次攻擊 / 二選一</span>
-                </div>
-                <div class="action-card">
-                    <div class="action-name">🏹 <span class="keyword" data-tooltip="誓約弓：使用誓約劍射擊，對誓約之敵命中時額外造成誓約傷害，且通常可獲得攻擊優勢。">遠程：誓約弓雙發連射</span></div>
-                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
-                    </div>
-                    <div class="btn-group" style="margin-bottom: 8px;">
-                        <button class="btn btn-phrase" onclick="copyText('我用主要動作對目標發動誓約弓連射兩次！')">📋 複製通用射擊台詞</button>
-                        <!-- <button class="btn btn-roll" style="background-color:#45aaf2; color:white;" onclick="rollRanged()">🎲 射擊</button> -->
-                        <button class="btn btn-roll" style="background:#475569;" onclick="openManualPopup('ranged')">🛠 手動骰輸入</button>
-                    </div>
-                </div>
-                <div class="action-card">
-                    <div class="action-name">⚔️ 近戰：短劍+匕首雙刀流 (送第三刀)</div>
-                    <div class="action-desc">主手短劍砍兩下 (1d6+5) + 副手匕首利用 Nick 免費送第三刀 (1d4+5)。</div>
-                    <!-- <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
-                        <label class="manual-checkbox"><input type="checkbox" id="manual-melee-advantage"> 優勢</label>
-                        <label class="manual-checkbox"><input type="checkbox" id="manual-melee-crit"> 暴擊</label>
-                    </div> -->
-                    <div class="btn-group">
-                        <button class="btn btn-phrase" onclick="copyText('我發動近戰雙刀流！主手短劍砍兩下（命中+9/傷害1d6+5）。因匕首有精通迅擊詞條，我直接免費追加副手匕首第三刀（命中+9/傷害1d4+5）！')">📋 複製雙刀連砍台詞</button>
-                        <!-- <button class="btn btn-roll" onclick="rollMeleeCombo()">🎲 一鍵模擬砍三刀</button> -->
-                        <button class="btn btn-roll" style="background:#475569;" onclick="openManualPopup('melee')">🛠 手動骰輸入</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 🧮 實際骰子計算 -->
-            <!-- <div class="card" style="border:1px dashed #64748b; background-color:#111827;">
-                <div class="step-header">
-                    <span class="step-title">實際骰子計算</span>
-                    <span class="step-badge">現實擲骰輸入</span>
-                </div>
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                        <input id="actual-d20" type="number" min="1" max="20" placeholder="實際 d20" style="padding:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main)">
-                        <input id="actual-adv-d20-2" type="number" min="1" max="20" placeholder="實際 優勢 d20 2" style="padding:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main)">
-                    </div>
-                    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:8px;">
-                        <button class="btn btn-roll" onclick="computeActualAttack('single')">🎲 計算單發命中</button>
-                        <button class="btn btn-roll" onclick="computeActualAttack('advantage')">🎲 計算優勢命中</button>
-                        <button class="btn btn-phrase" style="background:#6b7280;" onclick="recordActualMiss()">❌ 記錄未命中</button>
-                    </div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                        <input id="actual-damage-values" placeholder="實際傷害骰 (逗號分隔) e.g. 8,6,5" style="padding:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main)">
-                        <input id="actual-damage-bonus" type="number" placeholder="固定加值 +5" style="padding:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-main)">
-                    </div>
-                    <button class="btn btn-roll" onclick="computeActualDamage()">🎲 計算實際傷害</button>
-                </div>
-            </div> -->
-
-            <!-- 第三步 -->
-            <div class="card">
-                <div class="step-header">
-                    <span class="step-title">第三步：命中時特效宣告 (<span class="keyword" data-tooltip="戰術主宰：命中時可將精通詞條效果改為推離、削弱或緩速三選一。">戰術主宰</span>)</span>
-                    <span class="step-badge">命中時任選一</span>
-                </div>
-                <div class="effect-grid">
-                    <button class="btn btn-effect" onclick="copyText('命中！我觸發戰術主宰，把敵人往後擊飛 10 呎。')">
-                        <span>💥 【推離】</span><span style="font-size:11px;color:var(--text-muted)">擊飛 10 呎</span>
-                    </button>
-                    <button class="btn btn-effect" onclick="copyText('命中！我觸發戰術主宰，扣除敵人 10 呎移動速度。')">
-                        <span>💤 【緩速】</span><span style="font-size:11px;color:var(--text-muted)">減速 10 呎</span>
-                    </button>
-                    <button class="btn btn-effect" onclick="copyText('命中！我觸發戰術主宰，該敵人下一次發動的攻擊檢定直接變成劣勢。')">
-                        <span>🛡️ 【削弱】</span><span style="font-size:11px;color:var(--text-muted)">下發檢定劣勢</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 第四步 -->
-            <div class="card" style="border: 1px solid var(--primary); background-color: #271418;">
-                <div class="step-header"><span class="step-title" style="color:var(--primary)">第四步：🔥 骰出 19-20 <span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>特典</span></div>
-                <div class="btn-group">
-                    <button class="btn btn-phrase" onclick="copyText('我暴擊了！所有傷害骰子數量翻倍！並觸發【運動健將】立刻免費移動 15 呎且不引發任何借機攻擊！')">📋 複製暴擊高喊台詞</button>
-                    <button class="btn btn-roll" style="background:#475569;" onclick="openManualPopup('crit')">🛠 手動骰輸入</button>
-                </div>
-            </div>
-
-            <!-- 大招與反應 -->
-            <div class="card" style="border: 1px dashed var(--accent);">
-                <div class="step-title" style="color:var(--accent); margin-bottom:8px;">🚨 爆發大招 & 敵方回合反應</div>
-                <div class="btn-group">
-                    <button class="btn btn-phrase" style="background-color:#6c5ce7;" data-track-resource="action-surge" onclick="copyText('我啟動【動作如潮】，這回合多獲得一個主要動作！主要動作拿誓約弓狂暴連射 4 箭！')">💥 宣告【<span class="keyword" data-tooltip="動作如潮：本回合可額外獲得一個動作。短休或長休後恢復。17 級後每次休息可用 2 次。">動作如潮</span>】(射4箭)</button>
-                    <button class="btn btn-phrase" style="background-color:#a855f7;" data-track-resource="unyielding" onclick="copyText('我啟動 9 等【不屈】重投這一次豁免，並且在新的結果上無條件 +9 點！')">🛡️ 敵方回合：啟動【<span class="keyword" data-tooltip="不屈：豁免檢定失敗時可重投，並加上戰士等級的固定值。須採用新結果，長休恢復。">不屈重投</span>】</button>
-                </div>
-            </div>
-
+            <!-- ⚔️ 通用攻擊面板（依角色資料動態產生） -->
+            <div id="attack-actions"></div>
+            <div id="spellcasting-card"></div>
             <!-- 📥 可移動即時戰鬥日誌 -->
             <div class="log-panel floating-log-panel" id="floating-log-panel">
                 <div class="log-header" id="log-panel-header">
@@ -507,139 +550,24 @@
             </div>
             <div class="manual-popup-body">
                 <div class="manual-popup-section">
-                    <div class="manual-popup-section-title">步驟 1：選擇場景</div>
-                    <div class="btn-group manual-scenario-group" style="flex-wrap: wrap; gap: 8px;">
-                        <button id="manual-scenario-secondwind" class="btn btn-roll manual-scenario-button" onclick="setManualScenario('secondwind')">🩸 <span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值。短休後可使用一次，長休恢復。">回氣</span></button>
-                        <button id="manual-scenario-ranged" class="btn btn-roll manual-scenario-button" onclick="setManualScenario('ranged')">🏹 遠程</button>
-                        <button id="manual-scenario-melee" class="btn btn-roll manual-scenario-button" onclick="setManualScenario('melee')">⚔️ 近戰</button>
-                    </div>
+                    <div class="manual-popup-section-title">步驟 1：選擇攻擊</div>
+                    <div class="btn-group manual-scenario-group" style="flex-wrap: wrap; gap: 8px;" id="manual-attack-chips"></div>
                     <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-                        <div class="manual-popup-note">目前場景：<strong id="manual-scenario-label">遠程</strong></div>
-                        <label class="manual-checkbox"><input type="checkbox" id="manual-advantage-popup" onclick="updateManualFieldsVisibility()"> <span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span></label>
-                        <!-- <label class="manual-checkbox"><input type="checkbox" id="manual-crit-popup" onclick="updateManualFieldsVisibility()"> 暴擊</label> -->
+                        <div class="manual-popup-note">目前攻擊：<strong id="manual-scenario-label">—</strong></div>
+                        <label class="manual-checkbox"><input type="checkbox" id="manual-advantage-popup" onclick="toggleManualAdvantage()"> <span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span></label>
                     </div>
                 </div>
                 <div class="manual-popup-section">
-                    <div class="manual-popup-section-title">步驟 2：選擇骰子欄位</div>
-                    <div class="manual-popup-summary" id="manual-field-help">請先點擊一個骰子欄位，然後在下方直接選擇數值。<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>欄位會在 19-20 命中時自動顯示。</div>
-                    <div class="manual-popup-note" style="display:flex; flex-wrap:wrap; gap:12px;">
-           
+                    <div class="manual-popup-section-title">步驟 2：選擇魔子欄位</div>
+                    <div class="manual-popup-summary" id="manual-field-help">請先點擊一個魔子欄位，然後在下方直接選擇數值。暴擊時所有傷害魔會自動翻倍。</div>
+                    <div class="manual-popup-subsection">
+                        <div class="manual-popup-subsection-title">命中魔</div>
+                        <div class="manual-field-grid" id="manual-fields-hit"></div>
                     </div>
                     <div class="manual-popup-subsection">
-                        <div class="manual-popup-subsection-title">命中骰</div>
-                        <div class="manual-field-grid">
-                            <button type="button" class="manual-field" id="manual-ranged-d20" data-attack-group="ranged" data-scenarios="ranged" data-field-type="hit" data-dice="20" onclick="selectManualField('manual-ranged-d20')">
-                                <span>遠程 d20 +11</span><strong id="label-manual-ranged-d20">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-ranged-d20-adv-2" data-attack-group="ranged" data-scenarios="ranged" data-field-type="hit" data-require-adv="true" data-dice="20" onclick="selectManualField('manual-ranged-d20-adv-2')">
-                                <span><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>第2顆 d20</span><strong id="label-manual-ranged-d20-adv-2">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-melee-h1" data-attack-group="1" data-scenarios="melee" data-field-type="hit" data-dice="20" onclick="selectManualField('manual-melee-h1')">
-                                <span>近戰主手 d20 ①</span><strong id="label-manual-melee-h1">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-melee-h1-adv" data-attack-group="1" data-scenarios="melee" data-field-type="hit" data-require-adv="true" data-dice="20" onclick="selectManualField('manual-melee-h1-adv')">
-                                <span><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>主手 d20 ①</span><strong id="label-manual-melee-h1-adv">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-melee-h2" data-attack-group="2" data-scenarios="melee" data-field-type="hit" data-dice="20" onclick="selectManualField('manual-melee-h2')">
-                                <span>近戰主手 d20 ②</span><strong id="label-manual-melee-h2">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-melee-h2-adv" data-attack-group="2" data-scenarios="melee" data-field-type="hit" data-require-adv="true" data-dice="20" onclick="selectManualField('manual-melee-h2-adv')">
-                                <span><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>主手 d20 ②</span><strong id="label-manual-melee-h2-adv">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-melee-h3" data-attack-group="3" data-scenarios="melee" data-field-type="hit" data-dice="20" onclick="selectManualField('manual-melee-h3')">
-                                <span>近戰副手 d20</span><strong id="label-manual-melee-h3">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-melee-h3-adv" data-attack-group="3" data-scenarios="melee" data-field-type="hit" data-require-adv="true" data-dice="20" onclick="selectManualField('manual-melee-h3-adv')">
-                                <span><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>副手 d20</span><strong id="label-manual-melee-h3-adv">未選</strong>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="manual-popup-subsection">
-                        <div class="manual-popup-subsection-title">傷害骰 / 其他骰</div>
-                        <div class="manual-field-grid">
-                            <button type="button" class="manual-field" id="manual-ranged-d8" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-dice="8" onclick="selectManualField('manual-ranged-d8')">
-                                <span>遠程傷害 d8</span><strong id="label-manual-ranged-d8">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-secondwind-d10" data-attack-group="secondwind" data-scenarios="secondwind" data-field-type="damage" data-dice="10" onclick="selectManualField('manual-secondwind-d10')">
-                                <span><span class="keyword" data-tooltip="回氣：使用附贈動作恢復 1d10 + 戰士等級生命值。短休後可使用一次，長休恢復。">回氣</span> d10</span><strong id="label-manual-secondwind-d10">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-melee-d1" data-attack-group="1" data-scenarios="melee" data-field-type="damage" data-dice="6" onclick="selectManualField('manual-melee-d1')">
-                                <span>主手傷害 ①</span><strong id="label-manual-melee-d1">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-melee-d2" data-attack-group="2" data-scenarios="melee" data-field-type="damage" data-dice="6" onclick="selectManualField('manual-melee-d2')">
-                                <span>主手傷害 ②</span><strong id="label-manual-melee-d2">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-melee-d3" data-attack-group="3" data-scenarios="melee" data-field-type="damage" data-dice="4" onclick="selectManualField('manual-melee-d3')">
-                                <span>副手傷害 d4</span><strong id="label-manual-melee-d3">未選</strong>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="manual-popup-subsection">
-                        <div class="manual-popup-subsection-title">遠程<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>傷害</div>
-                        <div class="manual-field-grid">
-                            <button type="button" class="manual-field" id="manual-ranged-crit-d8-1" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-crit-target="ranged" data-dice="8" onclick="selectManualField('manual-ranged-crit-d8-1')">
-                                <span><span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span> d8 ①</span><strong id="label-manual-ranged-crit-d8-1">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-ranged-crit-d8-2" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-crit-target="ranged" data-dice="8" onclick="selectManualField('manual-ranged-crit-d8-2')">
-                                <span><span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span> d8 ②</span><strong id="label-manual-ranged-crit-d8-2">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-ranged-crit-6d6-1" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-require-adv="true" data-crit-target="ranged" data-dice="6" onclick="selectManualField('manual-ranged-crit-6d6-1')">
-                                <span>誓約暴擊 d6 ①</span><strong id="label-manual-ranged-crit-6d6-1">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-ranged-crit-6d6-2" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-require-adv="true" data-crit-target="ranged" data-dice="6" onclick="selectManualField('manual-ranged-crit-6d6-2')">
-                                <span>誓約暴擊 d6 ②</span><strong id="label-manual-ranged-crit-6d6-2">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-ranged-crit-6d6-3" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-require-adv="true" data-crit-target="ranged" data-dice="6" onclick="selectManualField('manual-ranged-crit-6d6-3')">
-                                <span>誓約暴擊 d6 ③</span><strong id="label-manual-ranged-crit-6d6-3">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-ranged-crit-6d6-4" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-require-adv="true" data-crit-target="ranged" data-dice="6" onclick="selectManualField('manual-ranged-crit-6d6-4')">
-                                <span>誓約暴擊 d6 ④</span><strong id="label-manual-ranged-crit-6d6-4">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-ranged-crit-6d6-5" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-require-adv="true" data-crit-target="ranged" data-dice="6" onclick="selectManualField('manual-ranged-crit-6d6-5')">
-                                <span>誓約暴擊 d6 ⑤</span><strong id="label-manual-ranged-crit-6d6-5">未選</strong>
-                            </button>
-                            <button type="button" class="manual-field" id="manual-ranged-crit-6d6-6" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-crit="true" data-require-adv="true" data-crit-target="ranged" data-dice="6" onclick="selectManualField('manual-ranged-crit-6d6-6')">
-                                <span>誓約暴擊 d6 ⑥</span><strong id="label-manual-ranged-crit-6d6-6">未選</strong>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="manual-popup-subsection">
-                    <div class="manual-popup-subsection-title">近戰暴擊傷害</div>
-                    <div class="manual-field-grid">
-                        <button type="button" class="manual-field" id="manual-melee-crit-d1-1" data-attack-group="1" data-scenarios="melee" data-field-type="damage" data-require-crit="true" data-crit-target="1" data-dice="6" onclick="selectManualField('manual-melee-crit-d1-1')">
-                            <span>暴擊① d6 ①</span><strong id="label-manual-melee-crit-d1-1">未選</strong>
-                        </button>
-                        <button type="button" class="manual-field" id="manual-melee-crit-d1-2" data-attack-group="1" data-scenarios="melee" data-field-type="damage" data-require-crit="true" data-crit-target="1" data-dice="6" onclick="selectManualField('manual-melee-crit-d1-2')">
-                            <span>暴擊① d6 ②</span><strong id="label-manual-melee-crit-d1-2">未選</strong>
-                        </button>
-                        <button type="button" class="manual-field" id="manual-melee-crit-d2-1" data-attack-group="2" data-scenarios="melee" data-field-type="damage" data-require-crit="true" data-crit-target="2" data-dice="6" onclick="selectManualField('manual-melee-crit-d2-1')">
-                            <span>暴擊② d6 ①</span><strong id="label-manual-melee-crit-d2-1">未選</strong>
-                        </button>
-                        <button type="button" class="manual-field" id="manual-melee-crit-d2-2" data-attack-group="2" data-scenarios="melee" data-field-type="damage" data-require-crit="true" data-crit-target="2" data-dice="6" onclick="selectManualField('manual-melee-crit-d2-2')">
-                            <span>暴擊② d6 ②</span><strong id="label-manual-melee-crit-d2-2">未選</strong>
-                        </button>
-                        <button type="button" class="manual-field" id="manual-melee-crit-d3-1" data-attack-group="3" data-scenarios="melee" data-field-type="damage" data-require-crit="true" data-crit-target="3" data-dice="4" onclick="selectManualField('manual-melee-crit-d3-1')">
-                            <span>暴擊③ d4 ①</span><strong id="label-manual-melee-crit-d3-1">未選</strong>
-                        </button>
-                        <button type="button" class="manual-field" id="manual-melee-crit-d3-2" data-attack-group="3" data-scenarios="melee" data-field-type="damage" data-require-crit="true" data-crit-target="3" data-dice="4" onclick="selectManualField('manual-melee-crit-d3-2')">
-                            <span>暴擊③ d4 ②</span><strong id="label-manual-melee-crit-d3-2">未選</strong>
-                        </button>
-                    </div>
-                </div>
-                <div class="manual-popup-subsection">
-                    <div class="manual-popup-subsection-title">誓約弓傷害</div>
-                    <div class="manual-field-grid">
-                        <button type="button" class="manual-field" id="manual-ranged-oath-3d6-1" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-adv="true" data-dice="6" onclick="selectManualField('manual-ranged-oath-3d6-1')">
-                            <span>誓約 d6 ①</span><strong id="label-manual-ranged-oath-3d6-1">未選</strong>
-                        </button>
-                        <button type="button" class="manual-field" id="manual-ranged-oath-3d6-2" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-adv="true" data-dice="6" onclick="selectManualField('manual-ranged-oath-3d6-2')">
-                            <span>誓約 d6 ②</span><strong id="label-manual-ranged-oath-3d6-2">未選</strong>
-                        </button>
-                        <button type="button" class="manual-field" id="manual-ranged-oath-3d6-3" data-attack-group="ranged" data-scenarios="ranged" data-field-type="damage" data-require-adv="true" data-dice="6" onclick="selectManualField('manual-ranged-oath-3d6-3')">
-                            <span>誓約 d6 ③</span><strong id="label-manual-ranged-oath-3d6-3">未選</strong>
-                        </button>
+                        <div class="manual-popup-subsection-title">傷害魔</div>
+                        <div class="manual-field-grid" id="manual-fields-damage"></div>
+                        <div class="manual-popup-note" id="manual-damage-formula" style="margin-top:6px;"></div>
                     </div>
                 </div>
                 <div class="manual-popup-section">
@@ -647,7 +575,7 @@
                     <div class="manual-popup-note">當前欄位：<strong id="manual-selected-field">無</strong>，已選值：<strong id="manual-selected-value">未選</strong></div>
                     <div id="manual-miss-action" style="display:none; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
                         <button type="button" class="btn btn-roll" style="background:#ef4444; color:#fff; min-width:170px;" onclick="recordManualMiss()">❌ 直接記錄未命中</button>
-                        <span class="manual-popup-note" id="manual-miss-note">命中骰輸入後，可直接記錄未命中。</span>
+                        <span class="manual-popup-note" id="manual-miss-note">命中魔輸入後，可直接記錄未命中。</span>
                     </div>
                     <div class="dice-picker-grid dice-picker-grid--20 manual-hidden" id="dice-grid-d20"></div>
                     <div class="dice-picker-grid dice-picker-grid--10 manual-hidden" id="dice-grid-d10"></div>
@@ -657,54 +585,56 @@
                 </div>
                 <div class="manual-popup-section">
                     <div class="manual-popup-section-title">規則速查</div>
-                    <div class="manual-popup-note"><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>時取最高 d20；19-20 為<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>；<span class="keyword" data-tooltip="暴擊：攻擊擲出最高擲骰時造成額外傷害，通常傷害骰翻倍。">暴擊</span>時所有傷害骰翻倍。</div>
+                    <div class="manual-popup-note"><span class="keyword" data-tooltip="優勢：擲兩個 d20，取較高的結果。">優勢</span>時取最高 d20；暴擊時所有傷害魔翻倍。命中 = d20 + 攻擊加值；傷害 = 魔面總和 + 固定加值。</div>
                 </div>
-            </div>
             <div class="manual-popup-actions">
                 <button class="btn btn-phrase" onclick="clearManualPopup()">清除全部</button>
                 <!-- <button class="btn btn-roll" style="background:#f59e0b; color:#000;" onclick="recordManualMiss()">❌ 記錄未命中</button> -->
-                <button class="btn btn-roll" onclick="calculateManualScenario()">📊 計算傷害</button>
+                <button class="btn btn-roll" onclick="calculateManual()">📊 計算傷害</button>
                 <!-- <button class="btn btn-roll" onclick="closeManualPopup()">儲存並關閉</button> -->
             </div>
         </div>
     </div>
 
-        <script type="module" src="app.js"></script>
+        <script type="module" src="app/index.js"></script>
 
         </section>
 
         <section class="page-face back-face">
             <div class="page-face-inner">
                 <header class="page-header" style="display:flex; align-items:center; justify-content:space-between;">
-                    <h1 style="margin:0;">🎭 角色扮演 / 技能 / 調查</h1>
+                    <h1 id="rp-title" style="margin:0;">🎭 角色扮演 / 技能 / 調查</h1>
                     <div class="header-actions">
                         <button class="btn-icon" type="button" data-page-toggle="true" onclick="togglePageFlip()" aria-label="Switch page" title="切換頁面">⚔️ 戰鬥頁</button>
+                        <button id="switch-character-btn-back" class="btn-icon" onclick="openCharacterSelect()" aria-label="Switch character" title="切換角色">👤</button>
+                        <button class="btn-icon" onclick="openActiveCard()" aria-label="Character card" title="角色卡">📇</button>
                     </div>
                 </header>
                 <div class="roleplay-page">
-                    <div class="roleplay-grid">
-                        <div class="card">
-                            <h2 style="margin-bottom:10px; color:var(--secondary);">角色扮演</h2>
-                            <ul class="roleplay-list">
-                                <li>用真實的口吻描述角色的情緒與目標。</li>
-                                <li>在交涉、威嚇與表演中強化台詞節奏。</li>
-                                <li>把每次行動都連結到角色動機與背景。</li>
-                            </ul>
-                        </div>
-                        <div class="card">
-                            <h2 style="margin-bottom:10px; color:var(--accent);">技能與調查</h2>
-                            <ul class="roleplay-list">
-                                <li>檢查環境、線索與隱藏訊息。</li>
-                                <li>確認技能檢定的適用情境與難度。</li>
-                                <li>記錄可疑人物、地點與與任務相關的細節。</li>
-                            </ul>
-                        </div>
+                <div class="roleplay-grid">
+                    <div class="card">
+                        <h2 style="margin-bottom:10px; color:var(--secondary);">🎯 技能 Skills</h2>
+                        <div id="rp-skills"></div>
                     </div>
                     <div class="card">
-                        <h2 style="margin-bottom:10px; color:var(--warning);">調查筆記</h2>
-                        <textarea class="roleplay-notes" placeholder="輸入調查線索、角色動機或技能計劃..."></textarea>
+                        <h2 style="margin-bottom:10px; color:var(--accent);">🛡️ 豁免 Saving Throws</h2>
+                        <div class="cc-chips" id="rp-saves"></div>
+                    </div>
+                    <div class="card" style="grid-column: span 2;">
+                        <h2 style="margin-bottom:10px; color:var(--warning);">📜 特性 / 專長</h2>
+                        <ul id="rp-features" style="margin:0; padding-left:18px; line-height:1.6;"></ul>
+                    </div>
+                    <div class="card" style="grid-column: span 2;">
+                        <h2 style="margin-bottom:10px; color:var(--secondary);">🎭 角色設定 / 背景</h2>
+                        <div class="rp-traits" id="rp-traits"></div>
                     </div>
                 </div>
+                <div class="card">
+                    <h2 style="margin-bottom:10px; color:var(--warning);">📓 調查筆記</h2>
+                    <textarea id="rp-notes" class="roleplay-notes" placeholder="輸入調查線索、角色動機或技能計劃..."></textarea>
+                    <div class="manual-popup-note">筆記會以目前角色自動儲存。</div>
+                </div>
+            </div>
             </div>
         </section>
     </div>

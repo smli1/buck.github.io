@@ -18,7 +18,7 @@
         if (target === 4) { renderItems(); renderGearList(); fillWeaponsChips(); }
         if (target === 5) { refreshStep5(); if (draft.spellcaster) renderSpellList(); }
         if (target === 7) renderFeatures();
-        if (target === 10) { suggestClassFeatures(); suggestRaceFeatures(); suggestBackgroundFeatures(); renderCard(); }
+        if (target === 10) { if (!EDIT_MODE && !BLOCK_SUGGESTIONS) { suggestClassFeatures(); suggestRaceFeatures(); suggestBackgroundFeatures(); } renderCard(); }
         // persist DOM-to-draft for later steps
         document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
         document.getElementById('step-' + target).classList.add('active');
@@ -121,7 +121,7 @@
         const now = new Date().toISOString();
         const pb = draft.profBonus;
         return {
-            id: 'char-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+            id: draft._editId || ('char-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
             system: SYSTEM,
             systemName: SYSTEM_NAME,
             name: draft.name || 'Unnamed',
@@ -132,6 +132,7 @@
             background: draft.background && BACKGROUNDS[draft.background] ? { name: BACKGROUNDS[draft.background].name, bonuses: {} } : null,
             alignment: draft.alignment,
             dataSource: null,
+            appearance: draft.appearance || '',
             proficiencyBonus: pb,
             abilityScores: { ...draft.abilities },
             maxHp: draft.maxHp,
@@ -171,7 +172,7 @@
             inventory: { gold: draft.gold, notes: '', items: draft.items.map(it => ({ name: it.name, quantity: it.qty || 1, description: '' })), quickAccessIndices: [] },
             notes: draft.notes,
             settings: {},
-            createdAt: now,
+            createdAt: draft._editCreatedAt || now,
             updatedAt: now
         };
     }
@@ -289,6 +290,351 @@
     }
 
     // ───────────────────────────────────────────────────────────
+    // Edit mode: preload an existing character into the wizard
+    // ───────────────────────────────────────────────────────────
+    const EDIT_MODE = new URLSearchParams(window.location.search).has('edit');
+    let PRELOAD_ID = new URLSearchParams(window.location.search).get('edit') || null;
+    let BLOCK_SUGGESTIONS = false;
+
+    function findKeyByDisplay(map, display) {
+        if (!display) return '';
+        const hit = Object.keys(map || {}).find(k => map[k] && map[k].name === display);
+        return hit || '';
+    }
+
+    function preloadCharacter(ch) {
+        if (!ch || typeof ch !== 'object') return false;
+
+        // select the game system first (resets races/classes/abilities to that system's defaults)
+        const sys = (ch.system && SYSTEMS[ch.system]) ? ch.system : 'dnd-5e-2014';
+        try { if (SYSTEM !== sys) applySystem(sys); } catch (e) { /* keep current */ }
+
+        const scores = ch.abilityScores || ch.abilities || {};
+        // manual method keeps stored values as-is (setMethod resets scores, so call it first)
+        try { setMethod('manual'); } catch (e) { draft.method = 'manual'; }
+        ABILITY_KEYS.forEach(k => { draft.abilities[k] = Number.isFinite(Number(scores[k])) ? Number(scores[k]) : 10; });
+
+        const raceKey = findKeyByDisplay(RACES, ch.race);
+        const classKey = findKeyByDisplay(CLASSES, ch.class);
+        const bgName = (typeof ch.background === 'string') ? ch.background : (ch.background && ch.background.name);
+        const bgKey = findKeyByDisplay(BACKGROUNDS, bgName);
+
+        draft.race = raceKey;
+        draft.class = classKey;
+        draft.background = bgKey;
+        draft.subclass = ch.subclass || '';
+        draft._prevRaceBonuses = RACES[raceKey] ? Object.assign({}, RACES[raceKey].bonuses || {}) : {};
+        draft.level = Math.max(1, Math.min(20, Number(ch.level) || 1));
+        draft.name = ch.name || '';
+        draft.alignment = ch.alignment || '';
+        draft.appearance = ch.appearance || '';
+        draft.notes = ch.notes || '';
+        draft.speed = Number((ch.speed && ch.speed.walk) || 30) || 30;
+        draft.maxHp = Number.isFinite(Number(ch.maxHp)) ? Number(ch.maxHp) : null;
+        draft.currentHp = Number.isFinite(Number(ch.currentHp)) ? Number(ch.currentHp) : draft.maxHp;
+        draft.ac = Number.isFinite(Number(ch.ac)) ? Number(ch.ac) : null;
+        draft.gold = Number(ch.gold) || 0;
+        draft.savingThrows = Array.isArray(ch.savingThrows) ? ch.savingThrows.slice() : [];
+        draft.skills = Array.isArray(ch.skills) ? ch.skills.slice() : [];
+        draft.languages = (Array.isArray(ch.languages) && ch.languages.length) ? ch.languages.slice() : ['Common'];
+        draft.otherProficiencies = ch.otherProficiencies || '';
+        draft.features = Array.isArray(ch.features)
+            ? ch.features.map(f => ({ name: (f && f.name) || '', desc: (f && (f.description || f.desc)) || '' }))
+            : [];
+        draft.traits = {
+            personality: (ch.traits && ch.traits.personality) || '',
+            ideals: (ch.traits && ch.traits.ideals) || '',
+            bonds: (ch.traits && ch.traits.bonds) || '',
+            flaws: (ch.traits && ch.traits.flaws) || ''
+        };
+        draft.attacks = Array.isArray(ch.attacks) ? ch.attacks.map(a => ({ ...a })) : [];
+        draft.spellcaster = !!(ch.spellcasting);
+        draft.spellAbility = (ch.spellcasting && ch.spellcasting.ability) || 'int';
+        draft.spells = Array.isArray(ch.spellcasting && ch.spellcasting.spells)
+            ? ch.spellcasting.spells.map(s => typeof s === 'string' ? { level: 0, name: s } : { level: Number(s.level) || 0, name: s.name || '' })
+            : [];
+        draft.spellSlots = (ch.spellcasting && ch.spellcasting.slots) || '';
+        draft.items = (ch.inventory && Array.isArray(ch.inventory.items))
+            ? ch.inventory.items.map(it => ({ name: it.name || '', qty: Number(it.quantity) || 1 }))
+            : [];
+
+        // keep original identity + creation timestamp when editing
+        draft._editId = String(ch.id || PRELOAD_ID || '');
+        draft._editCreatedAt = ch.createdAt || null;
+
+        // mark combat fields as user-specified so refreshCombatSuggestions() won't override them
+        draft._hpTouched = true; draft._curTouched = true; draft._acTouched = true; draft._speedTouched = true;
+
+        // hunger-strike flags: subclass is a display value; keep custom in the custom input
+        s3SavesSet = draft.savingThrows.slice();
+        s3SkillsSet = draft.skills.slice();
+        s3LangsSet = draft.languages.slice();
+
+        // identify the armor choice by display name (best effort)
+        const armorName = ch.armor && typeof ch.armor === 'object' ? ch.armor.name : null;
+        draft.armor = armorName === 'No Armor (Unarmored)' || armorName === 'No Armor' ? '' : findKeyByDisplay(ARMORS, armorName);
+
+        // ── sync DOM ───────────────────────────────────────────
+        const setVal = (id, value) => { const el = document.getElementById(id); if (el) el.value = value != null ? value : ''; };
+        setVal('s1-race', raceKey);
+        setVal('s1-class', classKey);
+        setVal('s1-background', bgKey);
+        setVal('s1-level', draft.level);
+        setVal('s6-speed', draft.speed);
+        setVal('s6-maxhp', draft.maxHp != null ? draft.maxHp : '');
+        setVal('s6-curhp', draft.currentHp != null ? draft.currentHp : '');
+        setVal('s6-ac', draft.ac != null ? draft.ac : '');
+        setVal('s4-gold', draft.gold);
+        setVal('s4-armor', draft.armor);
+        setVal('s3-other', draft.otherProficiencies);
+        setVal('s9-name', draft.name);
+        setVal('s9-alignment', draft.alignment);
+        setVal('s9-appearance', draft.appearance);
+        setVal('s9-notes', draft.notes);
+        setVal('s8-personality', draft.traits.personality);
+        setVal('s8-ideals', draft.traits.ideals);
+        setVal('s8-bonds', draft.traits.bonds);
+        setVal('s8-flaws', draft.traits.flaws);
+
+        document.getElementById('s1-race-hint').textContent = (RACES[raceKey] || { notes: '' }).notes || '';
+        document.getElementById('s1-class-hint').textContent = (CLASSES[classKey] || { notes: '' }).notes || '';
+        document.getElementById('s1-bg-hint').textContent = (BACKGROUNDS[bgKey] || { notes: '' }).notes || '';
+        document.getElementById('s1-pb').textContent = formatMod(PROF_BONUS(draft.level));
+
+        // hit die + subclass options
+        const die = CLASSES[classKey] ? CLASSES[classKey].hitDie : 'd10';
+        document.getElementById('s6-hitdie').value = die;
+        refreshSubclassOptions();
+        const subSel = document.getElementById('s1-subclass');
+        if (draft.subclass) {
+            const matched = subSel.options && Array.prototype.some.call(subSel.options, o => o.value === draft.subclass);
+            if (matched) subSel.value = draft.subclass;
+            else {
+                subSel.value = '__custom__';
+                document.getElementById('s1-subclass-custom').value = draft.subclass;
+            }
+        }
+
+        // spellcasting box
+        const spellBox = document.getElementById('s5-spellcaster');
+        spellBox.checked = draft.spellcaster;
+        document.getElementById('s5-spell-box').style.display = draft.spellcaster ? 'grid' : 'none';
+        document.getElementById('s5-spell-ability').value = draft.spellAbility;
+        document.getElementById('s5-spell-slots').value = draft.spellSlots;
+        draft._slotsTouched = draft.spellcaster;
+
+        // ability grid (manual mode keeps stored values as-is)
+        syncAbilitiesToInputs();
+
+        // step-3 chips (saves/skills/languages)
+        rebuildStep3();
+
+        // items, weapons (best-effort: weapons list is id-based; we leave chips as-is)
+        renderItems();
+        fillWeaponsChips();
+
+        // attacks + spells
+        renderAttacks();
+        if (draft.spellcaster) { renderSpellList(); refreshStep5(); } else { renderAttacks(); }
+
+        // features + combat suggestions (won't override touched HP/AC)
+        renderFeatures();
+        refreshCombatSuggestions();
+
+        // review card at step 10
+        try { goStep(10); } catch (e) { /* ignore */ }
+        return true;
+    }
+
+    async function loadEditableCharacter(id) {
+        // localStorage overlay first (characters saved in this browser)
+        const overlay = loadLocalOverlay();
+        if (overlay[id]) return overlay[id];
+        // fall back to the data folder via the registry
+        try {
+            const res = await fetch('data/characters.json');
+            if (!res.ok) return null;
+            const data = await res.json();
+            const registry = Array.isArray(data) ? data : (Array.isArray(data.characters) ? data.characters : []);
+            const entry = registry.find(e => String(e.id) === id);
+            if (!entry) return null;
+            const file = String(entry.file || `characters/${id}.json`);
+            const r = await fetch('data/' + file);
+            if (!r.ok) return null;
+            return await r.json();
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function initEditMode() {
+        if (!EDIT_MODE || !PRELOAD_ID) return;
+        const ch = await loadEditableCharacter(PRELOAD_ID);
+        if (!ch) {
+            showDialog('Character not found', '"' + PRELOAD_ID + '" was not found. It may need to be re-exported into data/ or re-saved in this browser.', []);
+            return;
+        }
+        preloadCharacter(ch);
+    }
+
+    // ───────────────────────────────────────────────────────────
+    // Auto-save the in-progress draft (NEW characters only)
+    // Stored separately from the roster so the character selector can show
+    // it as a resumable draft card that cannot be launched.
+    // ───────────────────────────────────────────────────────────
+    const AUTOSAVE_KEY = 'rpg_creator_draft';
+    let draftAutosaveTimer = null;
+
+    function buildDraftSnapshot() {
+        try { copyDomToDraft(); } catch (e) { /* keep whatever draft holds */ }
+        const f = {
+            abilities: Object.assign({}, draft.abilities || {}),
+            level: draft.level, race: draft.race, class: draft.class,
+            background: draft.background, subclass: draft.subclass,
+            name: draft.name, alignment: draft.alignment, appearance: draft.appearance, notes: draft.notes,
+            speed: draft.speed, maxHp: draft.maxHp, currentHp: draft.currentHp, ac: draft.ac, gold: draft.gold,
+            otherProficiencies: draft.otherProficiencies,
+            features: (draft.features || []).map(x => ({ name: (x && x.name) || '', desc: (x && (x.desc || x.description)) || '' })),
+            attacks: (draft.attacks || []).map(a => ({ ...a })),
+            spellcaster: !!draft.spellcaster, spellAbility: draft.spellAbility || 'int',
+            spellSlots: draft.spellSlots || '', spells: (draft.spells || []).map(s => ({ level: Number(s.level) || 0, name: (s && s.name) || '' })),
+            items: (draft.items || []).map(it => ({ name: (it && it.name) || '', qty: Number(it.qty) || Number(it.quantity) || 1 })),
+            traits: { personality: (draft.traits && draft.traits.personality) || '', ideals: (draft.traits && draft.traits.ideals) || '', bonds: (draft.traits && draft.traits.bonds) || '', flaws: (draft.traits && draft.traits.flaws) || '' },
+            _hpTouched: !!draft._hpTouched, _curTouched: !!draft._curTouched,
+            _acTouched: !!draft._acTouched, _speedTouched: !!draft._speedTouched, _slotsTouched: !!draft._slotsTouched
+        };
+        return {
+            v: 1,
+            system: SYSTEM || '',
+            step: currentStep,
+            method: draft.method || 'standard',
+            saves: (typeof s3SavesSet !== 'undefined' ? s3SavesSet : []).slice(),
+            skills: (typeof s3SkillsSet !== 'undefined' ? s3SkillsSet : []).slice(),
+            langs: (typeof s3LangsSet !== 'undefined' ? s3LangsSet : []).slice(),
+            draftFields: f,
+            savedAt: Date.now()
+        };
+    }
+
+    function saveDraftSnapshot() {
+        try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(buildDraftSnapshot())); }
+        catch (e) { /* storage full / private mode */ }
+    }
+
+    function scheduleAutosave() {
+        if (draftAutosaveTimer) clearTimeout(draftAutosaveTimer);
+        draftAutosaveTimer = setTimeout(saveDraftSnapshot, 500);
+    }
+
+    function clearDraftSnapshot() {
+        try { localStorage.removeItem(AUTOSAVE_KEY); } catch (e) { /* ignore */ }
+    }
+
+    // Restore an auto-saved draft into the wizard (NEW-character flow only).
+    // Returns true when a draft was restored, false otherwise.
+    function restoreDraft() {
+        if (EDIT_MODE) return false;
+        let raw = null;
+        try { raw = localStorage.getItem(AUTOSAVE_KEY); } catch (e) { return false; }
+        if (!raw) return false;
+        let snap = null;
+        try { snap = JSON.parse(raw); } catch (e) { return false; }
+        if (!snap || !snap.draftFields || !snap.draftFields.abilities) return false;
+
+        const f = snap.draftFields;
+        const sys = (snap.system && SYSTEMS[snap.system]) ? snap.system : 'dnd-5e-2014';
+        try { if (SYSTEM !== sys) applySystem(sys); } catch (e) { /* keep current */ }
+        try { setMethod((snap.method === 'standard' || snap.method === 'pointbuy') ? snap.method : 'manual'); } catch (e) { draft.method = 'manual'; }
+        ABILITY_KEYS.forEach(k => { draft.abilities[k] = Number.isFinite(Number(f.abilities[k])) ? Number(f.abilities[k]) : 10; });
+
+        draft.level = Math.max(1, Math.min(20, Number(f.level) || 1));
+        draft.race = f.race || ''; draft.class = f.class || ''; draft.background = f.background || ''; draft.subclass = f.subclass || '';
+        draft._prevRaceBonuses = (draft.race && RACES[draft.race] && RACES[draft.race].bonuses) ? Object.assign({}, RACES[draft.race].bonuses) : {};
+        draft.name = f.name || ''; draft.alignment = f.alignment || ''; draft.appearance = f.appearance || ''; draft.notes = f.notes || '';
+        draft.speed = Number(f.speed) || 30;
+        draft.maxHp = Number.isFinite(Number(f.maxHp)) ? Number(f.maxHp) : null;
+        draft.currentHp = Number.isFinite(Number(f.currentHp)) ? Number(f.currentHp) : draft.maxHp;
+        draft.ac = Number.isFinite(Number(f.ac)) ? Number(f.ac) : null;
+        draft.gold = Number(f.gold) || 0;
+        draft.otherProficiencies = f.otherProficiencies || '';
+        draft.features = (f.features || []).map(x => ({ name: (x && x.name) || '', desc: (x && (x.desc || x.description)) || '' }));
+        draft.attacks = (f.attacks || []).map(a => ({ ...a }));
+        draft.spellcaster = !!f.spellcaster;
+        draft.spellAbility = f.spellAbility || 'int';
+        draft.spellSlots = f.spellSlots || '';
+        draft.spells = (f.spells || []).map(s => ({ level: Number(s.level) || 0, name: (s && s.name) || '' }));
+        draft.items = (f.items || []).map(it => ({ name: (it && it.name) || '', qty: Number(it.qty) || Number(it.quantity) || 1 }));
+        draft.traits = { personality: (f.traits && f.traits.personality) || '', ideals: (f.traits && f.traits.ideals) || '', bonds: (f.traits && f.traits.bonds) || '', flaws: (f.traits && f.traits.flaws) || '' };
+        draft.savingThrows = (snap.saves || []).slice();
+        draft.skills = (snap.skills || []).slice();
+        draft.languages = (snap.langs && snap.langs.length) ? snap.langs.slice() : ['Common'];
+        draft._hpTouched = !!f._hpTouched; draft._curTouched = !!f._curTouched;
+        draft._acTouched = !!f._acTouched; draft._speedTouched = !!f._speedTouched; draft._slotsTouched = !!f._slotsTouched;
+
+        // ── sync DOM ───────────────────────────────────────────
+        const setVal = (id, value) => { const el = document.getElementById(id); if (el) el.value = value != null ? value : ''; };
+        setVal('s1-race', draft.race);
+        setVal('s1-class', draft.class);
+        setVal('s1-background', draft.background);
+        setVal('s1-level', draft.level);
+        setVal('s6-speed', draft.speed);
+        setVal('s6-maxhp', draft.maxHp != null ? draft.maxHp : '');
+        setVal('s6-curhp', draft.currentHp != null ? draft.currentHp : '');
+        setVal('s6-ac', draft.ac != null ? draft.ac : '');
+        setVal('s4-gold', draft.gold);
+        setVal('s4-armor', '');
+        setVal('s3-other', draft.otherProficiencies);
+        setVal('s9-name', draft.name);
+        setVal('s9-alignment', draft.alignment);
+        setVal('s9-appearance', draft.appearance);
+        setVal('s9-notes', draft.notes);
+        setVal('s8-personality', draft.traits.personality);
+        setVal('s8-ideals', draft.traits.ideals);
+        setVal('s8-bonds', draft.traits.bonds);
+        setVal('s8-flaws', draft.traits.flaws);
+        setVal('s6-hitdie', (CLASSES[draft.class] && CLASSES[draft.class].hitDie) || 'd10');
+
+        refreshSubclassOptions();
+        const subSel = document.getElementById('s1-subclass');
+        if (draft.subclass) {
+            const matched = subSel.options && Array.prototype.some.call(subSel.options, o => o.value === draft.subclass);
+            if (matched) subSel.value = draft.subclass;
+            else { subSel.value = '__custom__'; document.getElementById('s1-subclass-custom').value = draft.subclass; }
+        } else {
+            subSel.value = '';
+        }
+        document.getElementById('s1-race-hint').textContent = (RACES[draft.race] || { notes: '' }).notes || '';
+        document.getElementById('s1-class-hint').textContent = (CLASSES[draft.class] || { notes: '' }).notes || '';
+        document.getElementById('s1-bg-hint').textContent = (BACKGROUNDS[draft.background] || { notes: '' }).notes || '';
+        document.getElementById('s1-pb').textContent = formatMod(PROF_BONUS(draft.level));
+
+        const spellBox = document.getElementById('s5-spellcaster');
+        spellBox.checked = draft.spellcaster;
+        document.getElementById('s5-spell-box').style.display = draft.spellcaster ? 'grid' : 'none';
+        document.getElementById('s5-spell-ability').value = draft.spellAbility;
+        document.getElementById('s5-spell-slots').value = draft.spellSlots;
+
+        s3SavesSet = draft.savingThrows.slice();
+        s3SkillsSet = draft.skills.slice();
+        s3LangsSet = draft.languages.slice();
+
+        syncAbilitiesToInputs();
+        rebuildStep3();
+        renderItems();
+        fillWeaponsChips();
+        renderAttacks();
+        if (draft.spellcaster) { renderSpellList(); refreshStep5(); }
+        renderFeatures();
+        refreshCombatSuggestions();
+
+        const target = Math.max(0, Math.min(CONSTANTS.totalSteps - 1, Number(snap.step) || 0));
+        BLOCK_SUGGESTIONS = true;
+        try { goStep(target); } catch (e) { /* ignore */ }
+        BLOCK_SUGGESTIONS = false;
+        return true;
+    }
+
+    // ───────────────────────────────────────────────────────────
     // Save / Export (compatible with data/characters/<id>.json + registry)
     // ───────────────────────────────────────────────────────────
     function loadLocalOverlay() {
@@ -350,7 +696,15 @@
     function finishSave() {
         finalChar = buildCharacterObject();
         saveToLocalOverlay();
-        showDialog('Character saved ✓', `"${finalChar.name}" is now saved in your browser and will appear on the Character Select page. Use Export to add the JSON files into the data/ folder.`);
+        clearDraftSnapshot();
+        // Return to the app and auto-launch this character (the select screen reads pending_launch_id).
+        try { localStorage.setItem('pending_launch_id', finalChar.id); } catch (e) { /* ignore */ }
+        // Auto-export the character as its own file + an updated registry, so it's easy to
+        // keep data/characters/<id>.json as a separate, transferable file.
+        downloadJson(`data/characters/${finalChar.id}.json`, JSON.stringify(finalChar, null, 2));
+        downloadJson('data/characters.json', JSON.stringify(buildRegistry(), null, 2));
+        // Give the downloads a moment to start, then return to the app.
+        window.setTimeout(function () { window.location.href = 'index.html'; }, 400);
     }
 
     function finishExport() {

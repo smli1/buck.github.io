@@ -1,5 +1,5 @@
-import { EquipmentManager } from './equipment.js';
-import { Character } from './character.js';
+import { EquipmentManager } from './core/equipment.js';
+import { Character } from './core/character.js';
 
 // Test equipment system integration
 console.log('Testing Equipment System...\n');

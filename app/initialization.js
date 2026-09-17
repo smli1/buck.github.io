@@ -1,5 +1,7 @@
 import { Character } from '../core/character.js';
 import { createBattleApp } from '../components/battle/index.js';
+import { initializeManualButtons } from '../components/combat/manual-dice.js';
+import { renderCombatPanels } from '../components/combat/combat-panel.js';
 import { initializeCharacterSettings } from '../components/settings/index.js';
 import { createFiveEDataStore, exposeFiveEDataStoreToWindow } from '../core/fivee-data.js';
 import { createPopupManager } from '../ui/popup-manager.js';
@@ -94,6 +96,27 @@ export async function initializeApp() {
 
     // Initialize popup manager
     window.__popupManager = createPopupManager();
+
+    // Swap the active character (used by the merged character-select launch flow)
+    window.switchCharacter = (payload) => {
+        const next = new Character(payload);
+        character = next;
+        window.character = character;
+        window.setCharacter = (key, value) => character.set(key, value);
+        syncBattleAppFromCharacter(battleApp, character);
+        try { settingsController?.renderCharacterSetupForm?.(); } catch (e) { /* ignore */ }
+        try { settingsController?.renderSettingsSummary?.(); } catch (e) { /* ignore */ }
+        try { settingsController?.renderDerivedStatsText?.(); } catch (e) { /* ignore */ }
+        try { settingsController?.renderCharPanelSummary?.(); } catch (e) { /* ignore */ }
+        try { settingsController?.renderTrackerResourcesFromCharacter?.(); } catch (e) { /* ignore */ }
+        try { settingsController?.setInventoryFormState?.(); } catch (e) { /* ignore */ }
+        try { settingsController?.renderInventoryList?.(); } catch (e) { /* ignore */ }
+        try { settingsController?.refreshDynamicTooltips?.(); } catch (e) { /* ignore */ }
+        renderCombatPanels().catch((err) => console.error('renderCombatPanels(switch) failed:', err));
+        settingsController?.bindCharacterChange?.();
+        logCharacterAction(`已切換角色：${character.data?.name || '未命名角色'}`);
+        return true;
+    };
 
     // Initialize character settings
     settingsController = initializeCharacterSettings({
@@ -247,7 +270,7 @@ export async function initializeApp() {
     });
 
     // Initialize UI components
-    settingsController.initializeManualButtons?.();
+    initializeManualButtons();
     initializeKeywordTooltips();
     initializePopupInteractionHandlers();
     initializeFiveEDataLookup();
@@ -256,6 +279,7 @@ export async function initializeApp() {
     settingsController.renderDerivedStatsText();
     settingsController.renderCharPanelSummary();
     settingsController.renderCharacterSetupForm();
+    renderCombatPanels().catch((err) => console.error('renderCombatPanels(init) failed:', err));
 
     return { character, battleApp, settingsController };
 }

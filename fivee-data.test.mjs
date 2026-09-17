@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FiveEDataStore } from './fivee-data.js';
+import { FiveEDataStore } from './core/fivee-data.js';
 
 const sampleData = {
   '/5e_data/backgrounds.json': [

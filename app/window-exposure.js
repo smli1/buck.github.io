@@ -1,22 +1,18 @@
 import { createBattleApp } from '../components/battle/index.js';
-import { 
+import {
     initializeManualButtons,
+    selectManualAttack,
+    selectManualField,
+    setManualDiceValue,
     openManualPopup,
     closeManualPopup,
     clearManualPopup,
-    calculateManualScenario,
+    calculateManual,
     recordManualMiss,
-    computeActualAttack,
-    recordActualMiss,
-    computeActualDamage,
-    rollSecondWind,
-    rollRanged,
-    rollMeleeCombo,
-    setManualScenario,
-    selectManualField,
-    setManualDiceValue,
-    updateManualFieldsVisibility
-} from '../components/manual/index.js';
+    toggleManualAdvantage,
+    quickRollAttack
+} from '../components/combat/manual-dice.js';
+import { renderCombatPanels } from '../components/combat/combat-panel.js';
 
 export function exposeBattleHelpers(viewModel) {
     window.modHP = (amt) => {
@@ -47,21 +43,17 @@ export function exposeBattleHelpers(viewModel) {
 
 export function exposeManualHelpers() {
     window.initializeManualButtons = initializeManualButtons;
+    window.selectManualAttack = selectManualAttack;
+    window.selectManualField = selectManualField;
+    window.setManualDiceValue = setManualDiceValue;
     window.openManualPopup = openManualPopup;
     window.closeManualPopup = closeManualPopup;
     window.clearManualPopup = clearManualPopup;
-    window.calculateManualScenario = calculateManualScenario;
+    window.calculateManual = calculateManual;
     window.recordManualMiss = recordManualMiss;
-    window.computeActualAttack = computeActualAttack;
-    window.recordActualMiss = recordActualMiss;
-    window.computeActualDamage = computeActualDamage;
-    window.rollSecondWind = rollSecondWind;
-    window.rollRanged = rollRanged;
-    window.rollMeleeCombo = rollMeleeCombo;
-    window.setManualScenario = setManualScenario;
-    window.selectManualField = selectManualField;
-    window.setManualDiceValue = setManualDiceValue;
-    window.updateManualFieldsVisibility = updateManualFieldsVisibility;
+    window.toggleManualAdvantage = toggleManualAdvantage;
+    window.quickRollAttack = quickRollAttack;
+    window.renderCombatPanels = renderCombatPanels;
 }
 
 function syncBattleAppFromCharacter(battleApp, activeCharacter) {

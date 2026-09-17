@@ -1,3 +1,5 @@
+import { initializeKeywordTooltips } from '../../ui/tooltip.js';
+
 const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
 export function createCharacterSetup({ getCharacter }) {
@@ -164,10 +166,7 @@ export function createCharacterSetup({ getCharacter }) {
         html += `</div>`;
 
         container.innerHTML = html;
-        try { 
-            const { initializeKeywordTooltips } = require('../../ui/tooltip.js');
-            initializeKeywordTooltips(); 
-        } catch (e) { /* ignore */ }
+        initializeKeywordTooltips();
         try {
             const statLong = document.getElementById('stat-longbow'); if (statLong) statLong.textContent = (st.longbowHit >= 0 ? '+' + st.longbowHit : st.longbowHit);
             const statAc = document.getElementById('stat-ac'); if (statAc) statAc.textContent = String(st.ac);

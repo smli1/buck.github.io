@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Character } from './character.js';
+import { Character } from './core/character.js';
 
 test('derives max hp from level and con modifier', () => {
   const character = new Character({
